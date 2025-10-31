@@ -15,61 +15,62 @@ import { MenuModule } from 'primeng/menu';
             </div>
         </div>
 
-        <span class="block text-muted-color font-medium mb-4">TODAY</span>
-        <ul class="p-0 mx-0 mt-0 mb-6 list-none">
-            <li class="flex items-center py-2 border-b border-surface">
-                <div class="w-12 h-12 flex items-center justify-center bg-blue-100 dark:bg-blue-400/10 rounded-full mr-4 shrink-0">
-                    <i class="pi pi-dollar text-xl! text-blue-500"></i>
-                </div>
-                <span class="text-surface-900 dark:text-surface-0 leading-normal"
-                    >Richard Jones
-                    <span class="text-surface-700 dark:text-surface-100">has purchased a blue t-shirt for <span class="text-primary font-bold">$79.00</span></span>
-                </span>
-            </li>
-            <li class="flex items-center py-2">
-                <div class="w-12 h-12 flex items-center justify-center bg-orange-100 dark:bg-orange-400/10 rounded-full mr-4 shrink-0">
-                    <i class="pi pi-download text-xl! text-orange-500"></i>
-                </div>
-                <span class="text-surface-700 dark:text-surface-100 leading-normal">Your request for withdrawal of <span class="text-primary font-bold">$2500.00</span> has been initiated.</span>
-            </li>
-        </ul>
+        <span class="block text-muted-color font-medium mb-4">¡Alerta!</span>
+<ul class="p-0 mx-0 mt-0 mb-6 list-none">
+    <li class="flex items-center py-2 border-b border-surface">
+        <div class="w-12 h-12 flex items-center justify-center bg-green-100 dark:bg-green-400/10 rounded-full mr-4 shrink-0">
+            <i class="pi pi-arrow-up text-xl! text-green-500"></i>
+        </div>
+        <span class="text-surface-900 dark:text-surface-0 leading-normal"
+            >Richard
+            <span class="text-surface-700 dark:text-surface-100">La reserva del hotel en Roma vence mañana. <span class="text-primary font-bold">Confirma el pago ahora.</span></span>
+        </span>
+    </li>
+    <li class="flex items-center py-2">
+        <div class="w-12 h-12 flex items-center justify-center bg-green-100 dark:bg-green-400/10 rounded-full mr-4 shrink-0">
+            <i class="pi pi-arrow-up text-xl! text-green-500"></i>
+        </div>
+        <span class="text-surface-700 dark:text-surface-100 leading-normal">Tu vuelo a París <span class="text-primary font-bold">sale en 3 horas.</span> ¡Dirígete al aeropuerto!</span>
+    </li>
+</ul>
 
-        <span class="block text-muted-color font-medium mb-4">YESTERDAY</span>
-        <ul class="p-0 m-0 list-none mb-6">
-            <li class="flex items-center py-2 border-b border-surface">
-                <div class="w-12 h-12 flex items-center justify-center bg-blue-100 dark:bg-blue-400/10 rounded-full mr-4 shrink-0">
-                    <i class="pi pi-dollar text-xl! text-blue-500"></i>
-                </div>
-                <span class="text-surface-900 dark:text-surface-0 leading-normal"
-                    >Keyser Wick
-                    <span class="text-surface-700 dark:text-surface-100">has purchased a black jacket for <span class="text-primary font-bold">$59.00</span></span>
-                </span>
-            </li>
-            <li class="flex items-center py-2 border-b border-surface">
-                <div class="w-12 h-12 flex items-center justify-center bg-pink-100 dark:bg-pink-400/10 rounded-full mr-4 shrink-0">
-                    <i class="pi pi-question text-xl! text-pink-500"></i>
-                </div>
-                <span class="text-surface-900 dark:text-surface-0 leading-normal"
-                    >Jane Davis
-                    <span class="text-surface-700 dark:text-surface-100">has posted a new questions about your product.</span>
-                </span>
-            </li>
-        </ul>
-        <span class="block text-muted-color font-medium mb-4">LAST WEEK</span>
-        <ul class="p-0 m-0 list-none">
-            <li class="flex items-center py-2 border-b border-surface">
-                <div class="w-12 h-12 flex items-center justify-center bg-green-100 dark:bg-green-400/10 rounded-full mr-4 shrink-0">
-                    <i class="pi pi-arrow-up text-xl! text-green-500"></i>
-                </div>
-                <span class="text-surface-900 dark:text-surface-0 leading-normal">Your revenue has increased by <span class="text-primary font-bold">%25</span>.</span>
-            </li>
-            <li class="flex items-center py-2 border-b border-surface">
-                <div class="w-12 h-12 flex items-center justify-center bg-purple-100 dark:bg-purple-400/10 rounded-full mr-4 shrink-0">
-                    <i class="pi pi-heart text-xl! text-purple-500"></i>
-                </div>
-                <span class="text-surface-900 dark:text-surface-0 leading-normal"><span class="text-primary font-bold">12</span> users have added your products to their wishlist.</span>
-            </li>
-        </ul>
+<span class="block text-muted-color font-medium mb-4">Recordatorio de Empaque</span>
+<ul class="p-0 m-0 list-none mb-6">
+    <li class="flex items-center py-2 border-b border-surface">
+        <div class="w-12 h-12 flex items-center justify-center bg-green-100 dark:bg-green-400/10 rounded-full mr-4 shrink-0">
+            <i class="pi pi-arrow-up text-xl! text-green-500"></i>
+        </div>
+        <span class="text-surface-900 dark:text-surface-0 leading-normal"
+            >Importante!
+            <span class="text-surface-700 dark:text-surface-100">Faltan 2 días para tu viaje a la playa. ¿Ya revisaste la lista de Equipaje? <span class="text-primary font-bold">Recordatorio Diario</span></span>
+        </span>
+    </li>
+    <li class="flex items-center py-2 border-b border-surface">
+        <div class="w-12 h-12 flex items-center justify-center bg-green-100 dark:bg-green-400/10 rounded-full mr-4 shrink-0">
+            <i class="pi pi-arrow-up text-xl! text-green-500"></i>
+        </div>
+        <span class="text-surface-900 dark:text-surface-0 leading-normal"
+            >Documento Requerido
+            <span class="text-surface-700 dark:text-surface-100">¡Atención! Necesitas subir una copia digital de tu Visa para el destino.</span>
+        </span>
+    </li>
+</ul>
+
+<span class="block text-muted-color font-medium mb-4">¡Consejo!</span>
+<ul class="p-0 m-0 list-none">
+    <li class="flex items-center py-2 border-b border-surface">
+        <div class="w-12 h-12 flex items-center justify-center bg-green-100 dark:bg-green-400/10 rounded-full mr-4 shrink-0">
+            <i class="pi pi-arrow-up text-xl! text-green-500"></i>
+        </div>
+        <span class="text-surface-900 dark:text-surface-0 leading-normal">El clima en tu destino será soleado. Empaca protector solar. <span class="text-primary font-bold">¡Consejo!</span></span>
+    </li>
+    <li class="flex items-center py-2 border-b border-surface">
+        <div class="w-12 h-12 flex items-center justify-center bg-green-100 dark:bg-green-400/10 rounded-full mr-4 shrink-0">
+            <i class="pi pi-arrow-up text-xl! text-green-500"></i>
+        </div>
+        <span class="text-surface-900 dark:text-surface-0 leading-normal"><span class="text-primary font-bold">Hito Alcanzado</span> Viaje Completado! Todas las tareas de preparación están terminadas.¡Disfruta!</span>
+    </li>
+</ul>
     </div>`
 })
 export class NotificationsWidget {

@@ -1,18 +1,20 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ChartModule } from 'primeng/chart';
 import { debounceTime, Subscription } from 'rxjs';
 import { LayoutService } from '../../../layout/service/layout.service';
+import { CommonModule } from '@angular/common'; // Agregado para compatibilidad Standalone
 
 @Component({
     standalone: true,
     selector: 'app-revenue-stream-widget',
-    imports: [ChartModule],
+    imports: [ChartModule, CommonModule],
     template: `<div class="card mb-8!">
-        <div class="font-semibold text-xl mb-4">Revenue Stream</div>
+        <!-- Título cambiado para reflejar el contenido de viajes -->
+        <div class="font-semibold text-xl mb-4">Volumen de Reservas por Trimestre</div>
         <p-chart type="bar" [data]="chartData" [options]="chartOptions" class="h-100" />
     </div>`
 })
-export class RevenueStreamWidget {
+export class RevenueStreamWidget implements OnInit, OnDestroy {
     chartData: any;
 
     chartOptions: any;
@@ -36,27 +38,34 @@ export class RevenueStreamWidget {
         const textMutedColor = documentStyle.getPropertyValue('--text-color-secondary');
 
         this.chartData = {
+            // Eje X: Se mantienen los trimestres
             labels: ['Q1', 'Q2', 'Q3', 'Q4'],
             datasets: [
                 {
                     type: 'bar',
-                    label: 'Subscriptions',
+                    // Información de Viajes: Vuelos
+                    label: 'Vuelos Reservados',
                     backgroundColor: documentStyle.getPropertyValue('--p-primary-400'),
-                    data: [4000, 10000, 15000, 4000],
+                    // Datos de volumen (número de vuelos)
+                    data: [25, 40, 60, 30], 
                     barThickness: 32
                 },
                 {
                     type: 'bar',
-                    label: 'Advertising',
+                    // Información de Viajes: Alojamiento
+                    label: 'Noches de Hotel Reservadas',
                     backgroundColor: documentStyle.getPropertyValue('--p-primary-300'),
-                    data: [2100, 8400, 2400, 7500],
+                    // Datos de volumen (número de noches)
+                    data: [150, 200, 250, 180], 
                     barThickness: 32
                 },
                 {
                     type: 'bar',
-                    label: 'Affiliate',
+                    // Información de Viajes: Actividades
+                    label: 'Tours & Actividades',
                     backgroundColor: documentStyle.getPropertyValue('--p-primary-200'),
-                    data: [4100, 5200, 3400, 7400],
+                    // Datos de volumen (número de actividades)
+                    data: [80, 110, 130, 95], 
                     borderRadius: {
                         topLeft: 8,
                         topRight: 8,
@@ -76,6 +85,21 @@ export class RevenueStreamWidget {
                 legend: {
                     labels: {
                         color: textColor
+                    }
+                },
+                // Ajuste de tooltip para reflejar "unidades" o "volumen"
+                tooltip: {
+                    callbacks: {
+                        label: function(context: any) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += context.parsed.y + ' unidades';
+                            }
+                            return label;
+                        }
                     }
                 }
             },
