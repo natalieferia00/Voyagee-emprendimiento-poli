@@ -14,10 +14,9 @@ import { CommonModule } from '@angular/common';
                     <span class="block text-muted-color font-medium mb-4">Reservas Totales</span>
                     <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">452</div>
                 </div>
-                <!-- Ícono de Avión (pi-plane) -->
                 <div class="flex items-center justify-center bg-blue-100 dark:bg-blue-400/10 rounded-border" style="width: 2.5rem; height: 2.5rem">
-                    <i class="pi pi-plane text-blue-500 text-xl"></i>
-                </div>
+  <i class="pi pi-send text-blue-500 text-2xl"></i>
+</div>
             </div>
             <span class="text-primary font-medium">18 nuevas </span>
             <span class="text-muted-color">esta semana</span>
@@ -79,4 +78,4 @@ import { CommonModule } from '@angular/common';
     </div>
     `
 })
-export class StatsWidget {}
+export class StatsWidget { }
