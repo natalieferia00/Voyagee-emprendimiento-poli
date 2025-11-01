@@ -83,7 +83,7 @@ interface ExportColumn {
         >
             <ng-template #caption>
                 <div class="flex items-center justify-between">
-                    <h5 class="m-0">Manage Products</h5>
+                    <h5 class="m-0">Alojamientos</h5>
                     <p-iconfield>
                         <p-inputicon styleClass="pi pi-search" />
                         <input pInputText type="text" (input)="onGlobalFilter(dt, $event)" placeholder="Search..." />
@@ -95,27 +95,27 @@ interface ExportColumn {
                     <th style="width: 3rem">
                         <p-tableHeaderCheckbox />
                     </th>
-                    <th style="min-width: 16rem">Code</th>
-                    <th pSortableColumn="name" style="min-width:16rem">
-                        Name
-                        <p-sortIcon field="name" />
+                    <th style="min-width: 16rem">Codigo</th>
+                    <th pSortableColumn="nombre" style="min-width:16rem">
+                        Nombre
+                        <p-sortIcon field="nombre" />
                     </th>
-                    <th>Image</th>
-                    <th pSortableColumn="price" style="min-width: 8rem">
-                        Price
-                        <p-sortIcon field="price" />
+                    <th>Imagen</th>
+                    <th pSortableColumn="precio" style="min-width: 8rem">
+                        Precio
+                        <p-sortIcon field="precio" />
                     </th>
-                    <th pSortableColumn="category" style="min-width:10rem">
-                        Category
-                        <p-sortIcon field="category" />
+                    <th pSortableColumn="tipoAlojamiento" style="min-width:10rem">
+                        tipoAlojamiento
+                        <p-sortIcon field="tipoAlojamiento" />
                     </th>
-                    <th pSortableColumn="rating" style="min-width: 12rem">
-                        Reviews
-                        <p-sortIcon field="rating" />
+                    <th pSortableColumn="Estrellas" style="min-width: 12rem">
+                        Estrellas
+                        <p-sortIcon field="Estrellas" />
                     </th>
-                    <th pSortableColumn="inventoryStatus" style="min-width: 12rem">
-                        Status
-                        <p-sortIcon field="inventoryStatus" />
+                    <th pSortableColumn="Estado" style="min-width: 12rem">
+                        Estado
+                        <p-sortIcon field="Estado" />
                     </th>
                     <th style="min-width: 12rem"></th>
                 </tr>
@@ -146,54 +146,63 @@ interface ExportColumn {
             </ng-template>
         </p-table>
 
-        <p-dialog [(visible)]="productDialog" [style]="{ width: '450px' }" header="Product Details" [modal]="true">
+        <p-dialog [(visible)]="productDialog" [style]="{ width: '450px' }" header="Detalles del alojamiento" [modal]="true">
             <ng-template #content>
                 <div class="flex flex-col gap-6">
                     <img [src]="'https://primefaces.org/cdn/primeng/images/demo/product/' + product.image" [alt]="product.image" class="block m-auto pb-4" *ngIf="product.image" />
                     <div>
-                        <label for="name" class="block font-bold mb-3">Name</label>
+                        <label for="name" class="block font-bold mb-3"> Nombre</label>
                         <input type="text" pInputText id="name" [(ngModel)]="product.name" required autofocus fluid />
-                        <small class="text-red-500" *ngIf="submitted && !product.name">Name is required.</small>
+                        <small class="text-red-500" *ngIf="submitted && !product.name">El nombre del alojamiento es requerido.</small>
                     </div>
                     <div>
-                        <label for="description" class="block font-bold mb-3">Description</label>
+                        <label for="description" class="block font-bold mb-3">Descripción</label>
                         <textarea id="description" pTextarea [(ngModel)]="product.description" required rows="3" cols="20" fluid></textarea>
                     </div>
 
                     <div>
-                        <label for="inventoryStatus" class="block font-bold mb-3">Inventory Status</label>
+                        <label for="inventoryStatus" class="block font-bold mb-3">Estado del alojamiento</label>
                         <p-select [(ngModel)]="product.inventoryStatus" inputId="inventoryStatus" [options]="statuses" optionLabel="label" optionValue="label" placeholder="Select a Status" fluid />
                     </div>
 
                     <div>
-                        <span class="block font-bold mb-4">Category</span>
+                        <span class="block font-bold mb-4">Tipo de alojamiento</span>
                         <div class="grid grid-cols-12 gap-4">
                             <div class="flex items-center gap-2 col-span-6">
-                                <p-radiobutton id="category1" name="category" value="Accessories" [(ngModel)]="product.category" />
-                                <label for="category1">Accessories</label>
+                                <p-radiobutton id="category1" name="category" value="Hotel" [(ngModel)]="product.category" />
+                                <label for="category1">Hotel</label>
                             </div>
                             <div class="flex items-center gap-2 col-span-6">
-                                <p-radiobutton id="category2" name="category" value="Clothing" [(ngModel)]="product.category" />
-                                <label for="category2">Clothing</label>
+                                <p-radiobutton id="category2" name="category" value="resort" [(ngModel)]="product.category" />
+                                <label for="category2">Resort</label>
                             </div>
                             <div class="flex items-center gap-2 col-span-6">
-                                <p-radiobutton id="category3" name="category" value="Electronics" [(ngModel)]="product.category" />
-                                <label for="category3">Electronics</label>
+                                <p-radiobutton id="category3" name="category" value="Motel" [(ngModel)]="product.category" />
+                                <label for="category3">Motel</label>
                             </div>
                             <div class="flex items-center gap-2 col-span-6">
-                                <p-radiobutton id="category4" name="category" value="Fitness" [(ngModel)]="product.category" />
-                                <label for="category4">Fitness</label>
+                                <p-radiobutton id="category4" name="category" value="Villa" [(ngModel)]="product.category" />
+                                <label for="category4">Villa</label>
+                            </div>
+                             <div class="flex items-center gap-2 col-span-6">
+                                <p-radiobutton id="category4" name="category" value="Casa" [(ngModel)]="product.category" />
+                                <label for="category4">Casa</label>
+                                 <div class="flex items-center gap-2 col-span-6">
+                                <p-radiobutton id="category4" name="category" value="Otro" [(ngModel)]="product.category" />
+                                <label for="category4">Otro</label>
+                                
+                            </div>
                             </div>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-12 gap-4">
                         <div class="col-span-6">
-                            <label for="price" class="block font-bold mb-3">Price</label>
+                            <label for="price" class="block font-bold mb-3">Precio</label>
                             <p-inputnumber id="price" [(ngModel)]="product.price" mode="currency" currency="USD" locale="en-US" fluid />
                         </div>
                         <div class="col-span-6">
-                            <label for="quantity" class="block font-bold mb-3">Quantity</label>
+                            <label for="quantity" class="block font-bold mb-3">Estrellas</label>
                             <p-inputnumber id="quantity" [(ngModel)]="product.quantity" fluid />
                         </div>
                     </div>
@@ -249,17 +258,18 @@ export class Crud implements OnInit {
         });
 
         this.statuses = [
-            { label: 'INSTOCK', value: 'instock' },
-            { label: 'LOWSTOCK', value: 'lowstock' },
-            { label: 'OUTOFSTOCK', value: 'outofstock' }
+            { label: 'Visto', value: 'Visto' },
+            { label: 'Reservado', value: 'Reservado' },
+            { label: 'Descartado', value: 'Descartado' },
+            { label: 'En proceso', value: 'En proceso' }
         ];
 
         this.cols = [
-            { field: 'code', header: 'Code', customExportHeader: 'Product Code' },
-            { field: 'name', header: 'Name' },
-            { field: 'image', header: 'Image' },
-            { field: 'price', header: 'Price' },
-            { field: 'category', header: 'Category' }
+            { field: 'codigo', header: 'Codigo', customExportHeader: 'Codigo del alojamiento' },
+            { field: 'nombre', header: 'nombre' },
+            { field: 'imagen', header: 'Imagen' },
+            { field: 'precio', header: 'Precio' },
+            { field: 'tipoAlojamiento', header: 'tipoAlojamiento' }
         ];
 
         this.exportColumns = this.cols.map((col) => ({ title: col.header, dataKey: col.field }));
@@ -282,8 +292,8 @@ export class Crud implements OnInit {
 
     deleteSelectedProducts() {
         this.confirmationService.confirm({
-            message: 'Are you sure you want to delete the selected products?',
-            header: 'Confirm',
+            message: 'Estas seguro que quieres eliminar este alojamiento?',
+            header: 'Confirmar',
             icon: 'pi pi-exclamation-triangle',
             accept: () => {
                 this.products.set(this.products().filter((val) => !this.selectedProducts?.includes(val)));
@@ -291,7 +301,7 @@ export class Crud implements OnInit {
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Successful',
-                    detail: 'Products Deleted',
+                    detail: 'Alojamiento Eliminado',
                     life: 3000
                 });
             }
@@ -344,11 +354,11 @@ export class Crud implements OnInit {
 
     getSeverity(status: string) {
         switch (status) {
-            case 'INSTOCK':
+            case 'Reservado':
                 return 'success';
-            case 'LOWSTOCK':
+            case 'En proceso':
                 return 'warn';
-            case 'OUTOFSTOCK':
+            case 'Descartado':
                 return 'danger';
             default:
                 return 'info';
