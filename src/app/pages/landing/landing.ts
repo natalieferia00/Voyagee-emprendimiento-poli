@@ -91,32 +91,89 @@ import { FormsModule } from '@angular/forms';
         </div>
       </div>
 
-      <!-- 🏨 Diálogo del formulario -->
-      <p-dialog header="Agregar información del viaje" [(visible)]="visible" [modal]="true" [style]="{width: '30rem'}" [closable]="true">
-        <form (ngSubmit)="addInfo()" class="flex flex-col gap-4 p-2">
-          <div>
-            <label class="block font-medium mb-2 text-gray-700">Tipo de información</label>
-            <input type="text" pInputText [(ngModel)]="nuevo.tipo" name="tipo"
-              class="input-green" placeholder="Alojamiento, restaurante, sitio..." required />
-          </div>
+     <!-- 🏨 Diálogo del formulario -->
+<p-dialog 
+  header="Agregar información del viaje" 
+  [(visible)]="visible" 
+  [modal]="true" 
+  [style]="{ width: '45rem' }" 
+  [closable]="true"
+>
+  <form (ngSubmit)="addInfo()" class="flex flex-col gap-4 p-2">
 
-          <div>
-            <label class="block font-medium mb-2 text-gray-700">Nombre o lugar</label>
-            <input type="text" pInputText [(ngModel)]="nuevo.nombre" name="nombre"
-              class="input-green" placeholder="Ej. Hotel París" required />
-          </div>
-
-          <div>
-            <label class="block font-medium mb-2 text-gray-700">Descripción</label>
-            <textarea [(ngModel)]="nuevo.descripcion" name="descripcion"
-              class="input-green w-full border rounded p-2 focus:outline-none" rows="3"
-              placeholder="Breve descripción del sitio" required></textarea>
-          </div>
-
-          <button pButton label="Guardar" icon="pi pi-check" class="w-full p-button-success"></button>
-        </form>
-      </p-dialog>
+    <div>
+      <label class="block font-medium mb-2 text-gray-700">Tipo de información</label>
+      <input 
+        type="text" 
+        pInputText 
+        [(ngModel)]="nuevo.tipo" 
+        name="tipo"
+        class="input-green w-full" 
+        placeholder="Alojamiento, restaurante, sitio..." 
+        required 
+      />
     </div>
+
+    <div>
+      <label class="block font-medium mb-2 text-gray-700">Nombre o lugar</label>
+      <input 
+        type="text" 
+        pInputText 
+        [(ngModel)]="nuevo.nombre" 
+        name="nombre"
+        class="input-green w-full" 
+        placeholder="Ej. Hotel París" 
+        required 
+      />
+    </div>
+
+    <div>
+      <label class="block font-medium mb-2 text-gray-700">Descripción</label>
+      <textarea 
+        pInputTextarea 
+        [(ngModel)]="nuevo.descripcion" 
+        name="descripcion"
+        class="input-green w-full" 
+        rows="3"
+        placeholder="Breve descripción del sitio" 
+        required
+      ></textarea>
+    </div>
+
+    <button 
+      pButton 
+      label="Guardar" 
+      icon="pi pi-check" 
+      class="w-full p-button-success"
+    ></button>
+  </form>
+</p-dialog>
+
+<style>
+  /* 🎨 Estilo uniforme para todos los inputs */
+  .input-green {
+    width: 100%;
+    border: 1px solid #ccc;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    transition: all 0.3s ease;
+  }
+
+  /* 🌿 Color verde suave al hacer focus */
+  .input-green:focus {
+    border-color: #22c55e; /* verde suave */
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+    outline: none;
+  }
+
+  /* 🩶 Textarea con mismo comportamiento */
+  textarea.input-green:focus {
+    border-color: #22c55e;
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+    outline: none;
+  }
+</style>
+
   `,
   styles: [`
     /* 🌿 Estilo verde suave al enfocar */
