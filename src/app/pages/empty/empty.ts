@@ -24,7 +24,7 @@ interface Flight {
   flightNumber: string;
   origin: string;
   destination: string;
-  date: string; // viene como texto del servicio
+  date: string;
   price: number;
   status: string;
   description: string;
@@ -59,7 +59,7 @@ interface FlightWithParsedDate extends Flight {
   ],
   template: `
     <div class="card">
-      <div class="font-semibold text-xl mb-4">Gestión de Vuelos</div>
+      <div class="font-semibold text-xl mb-4">Gestión de Vuelos </div>
 
       <p-table
         #dt1
@@ -120,7 +120,7 @@ interface FlightWithParsedDate extends Flight {
               <p-tag
                 [value]="flight.status"
                 [severity]="getSeverity(flight.status)"
-              />
+              ></p-tag>
             </td>
             <td>{{ flight.description }}</td>
             <td>
@@ -128,7 +128,7 @@ interface FlightWithParsedDate extends Flight {
                 [value]="flight.progress"
                 [showValue]="false"
                 [style]="{ height: '0.5rem' }"
-              />
+              ></p-progressbar>
             </td>
           </tr>
         </ng-template>
@@ -159,7 +159,7 @@ export class Empty implements OnInit {
   @ViewChild('filter') filter!: ElementRef;
 
   ngOnInit() {
-    // ✈️ Simulamos datos de vuelos
+    // ✈️ Datos de ejemplo
     const flightData: Flight[] = [
       {
         id: 1,
@@ -196,8 +196,8 @@ export class Empty implements OnInit {
       }
     ];
 
-    // ✅ Convertimos las fechas sin modificar el tipo original
-    this.flights = flightData.map((flight) => ({
+    // ✅ Convertimos fechas sin modificar tipo original
+    this.flights = flightData.map(flight => ({
       ...flight,
       parsedDate: new Date(flight.date)
     }));
@@ -211,11 +211,11 @@ export class Empty implements OnInit {
 
   clear(table: Table) {
     table.clear();
-    this.filter.nativeElement.value = '';
+    if (this.filter) this.filter.nativeElement.value = '';
   }
 
-  // 🎨 Colores de las etiquetas según el estado del vuelo
-  getSeverity(status: string): string {
+  // 🎨 Tipado corregido: solo devuelve valores válidos
+  getSeverity(status: string): 'success' | 'info' | 'warn' | 'danger' | null {
     switch (status.toLowerCase()) {
       case 'reservado':
         return 'success';
