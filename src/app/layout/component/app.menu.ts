@@ -50,7 +50,7 @@ export class AppMenu {
                 routerLink: ['/pages'],
                 items: [
                     {
-                        label: 'Landing',
+                        label: 'Itinerario',
                         icon: 'pi pi-fw pi-globe',
                         routerLink: ['/landing']
                     },
@@ -76,7 +76,7 @@ export class AppMenu {
                         ]
                     },
                     {
-                        label: 'Crud',
+                        label: 'Alojamientos',
                         icon: 'pi pi-fw pi-pencil',
                         routerLink: ['/pages/crud']
                     },
@@ -86,7 +86,7 @@ export class AppMenu {
                         routerLink: ['/pages/notfound']
                     },
                     {
-                        label: 'Empty',
+                        label: 'Gestion de vuelos',
                         icon: 'pi pi-fw pi-circle-off',
                         routerLink: ['/pages/empty']
                     }
