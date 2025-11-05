@@ -62,7 +62,12 @@ export class AppMenu {
                     {
                         label: 'Gestión de Seguros',
                         icon: 'pi pi-fw pi-shield',
-                        routerLink: ['/seguros']   
+                        routerLink: ['/seguros']
+                    },
+                    {
+                        label: 'Mapa de Ruta',
+                        icon: 'pi pi-fw pi-map-marker',
+                        routerLink: ['/mapa-ruta']
                     },
                     {
                         label: 'Auth',

@@ -4,7 +4,7 @@ import { Dashboard } from './app/pages/dashboard/dashboard';
 import { Documentation } from './app/pages/documentation/documentation';
 import { Landing } from './app/pages/landing/landing';
 import { Notfound } from './app/pages/notfound/notfound';
-
+import { MapaRutaComponent } from '@/pages/maparuta/maparuta';
 import { ListaViajeComponent } from '@/pages/lista-viaje/lista-viaje';
 import { SegurosComponent } from '@/pages/seguros/seguros';
 
@@ -16,6 +16,7 @@ export const appRoutes: Routes = [
         children: [
             { path: '', component: Dashboard },
             { path: 'lista-viaje', component: ListaViajeComponent },
+            { path: 'mapa-ruta', component: MapaRutaComponent },
             { path: 'seguros', component: SegurosComponent },
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
             { path: 'documentation', component: Documentation },
