@@ -60,6 +60,16 @@ export class AppMenu {
                         routerLink: ['/lista-viaje']
                     },
                     {
+                        label: 'Calculadora de Gastos',
+                        icon: 'pi pi-fw pi-calculator',
+                        routerLink: ['/calculadora-gastos']
+                    },
+                    {
+                        label: 'Gestión de Alimentación',
+                        icon: 'pi pi-fw pi-box',
+                        routerLink: ['/gestion-alimentacion']
+                    },
+              {
                         label: 'Gestión de Seguros',
                         icon: 'pi pi-fw pi-shield',
                         routerLink: ['/seguros']

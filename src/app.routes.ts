@@ -7,6 +7,10 @@ import { Notfound } from './app/pages/notfound/notfound';
 import { MapaRutaComponent } from '@/pages/maparuta/maparuta';
 import { ListaViajeComponent } from '@/pages/lista-viaje/lista-viaje';
 import { SegurosComponent } from '@/pages/seguros/seguros';
+import { CalculadoraGastosComponent } from '@/pages/calculadoragastos/calculadoragastos';
+import { GestionAlimentacionComponent } from '@/pages/gestionalimentacion/gestionalimentacion';
+
+
 
 
 export const appRoutes: Routes = [
@@ -16,7 +20,9 @@ export const appRoutes: Routes = [
         children: [
             { path: '', component: Dashboard },
             { path: 'lista-viaje', component: ListaViajeComponent },
+            { path: 'calculadora-gastos', component: CalculadoraGastosComponent },
             { path: 'mapa-ruta', component: MapaRutaComponent },
+          { path: 'gestion-alimentacion', component: GestionAlimentacionComponent },
             { path: 'seguros', component: SegurosComponent },
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
             { path: 'documentation', component: Documentation },
