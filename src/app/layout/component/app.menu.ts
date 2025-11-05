@@ -50,7 +50,7 @@ export class AppMenu {
                 routerLink: ['/pages'],
                 items: [
                     {
-                        label: 'Itinerario',
+                        label: 'Presupuesto',
                         icon: 'pi pi-fw pi-globe',
                         routerLink: ['/landing']
                     },
@@ -69,7 +69,12 @@ export class AppMenu {
                         icon: 'pi pi-fw pi-box',
                         routerLink: ['/gestion-alimentacion']
                     },
-              {
+                    { 
+                        label: 'Gestión de Transporte',
+                        icon: 'pi pi-fw pi-circle-off', 
+                        routerLink: ['/gestion-transporte']
+                    },
+                    {
                         label: 'Gestión de Seguros',
                         icon: 'pi pi-fw pi-shield',
                         routerLink: ['/seguros']

@@ -1,237 +1,591 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { TimelineModule } from 'primeng/timeline';
-import { CardModule } from 'primeng/card';
-import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
+// /c:/Users/COMPU/sakai-ng/src/app/pages/landing/landing.component.ts
+
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+// Importaciones de PrimeNG API: Se mantienen ConfirmationService y MessageService,
+// pero se ELIMINA PrimeNGConfig para solucionar los errores 2304, 2305 y -992003.
+import { ConfirmationService, MessageService } from 'primeng/api'; 
 import { InputTextModule } from 'primeng/inputtext';
+import { MultiSelectModule } from 'primeng/multiselect';
+import { SelectModule } from 'primeng/select';
+import { SliderModule } from 'primeng/slider';
+import { Table, TableModule } from 'primeng/table';
+import { ProgressBarModule } from 'primeng/progressbar';
+import { ToggleButtonModule } from 'primeng/togglebutton';
+import { ToastModule } from 'primeng/toast';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ButtonModule } from 'primeng/button';
+import { RatingModule } from 'primeng/rating';
+import { RippleModule } from 'primeng/ripple';
+import { InputIconModule } from 'primeng/inputicon';
+import { IconFieldModule } from 'primeng/iconfield';
+import { TagModule } from 'primeng/tag';
+import { Customer, CustomerService, Representative } from '../service/customer.service';
+import { Product, ProductService } from '../service/product.service';
+import { ObjectUtils } from 'primeng/utils';
+
+interface expandedRows {
+    [key: string]: boolean;
+}
 
 @Component({
-  selector: 'app-landing',
-  standalone: true,
-  imports: [
-    CommonModule,
-    TimelineModule,
-    CardModule,
-    ButtonModule,
-    DialogModule,
-    InputTextModule,
-    FormsModule
-  ],
-  template: `
-    <div class="bg-surface-0 dark:bg-surface-900 p-6 min-h-screen">
-      <h1 class="text-3xl font-bold text-center mb-10 text-blue-700">
-        Itinerario de Viaje
-      </h1>
+    selector: 'app-landing',
+    standalone: true,
+    imports: [
+        TableModule,
+        MultiSelectModule,
+        SelectModule,
+        InputIconModule,
+        TagModule,
+        InputTextModule,
+        SliderModule,
+        ProgressBarModule,
+        ToggleButtonModule,
+        ToastModule,
+        CommonModule,
+        FormsModule,
+        ButtonModule,
+        RatingModule,
+        RippleModule,
+        IconFieldModule
+    ],
+    // El template (HTML) se mantiene sin cambios, ya que los errores eran de TypeScript.
+    template: ` 
+        <div class="card">
+            <div class="font-semibold text-xl mb-4">Filtering</div>
+            <p-table
+                #dt1
+                [value]="customers1"
+                dataKey="id"
+                [rows]="10"
+                [loading]="loading"
+                [rowHover]="true"
+                [showGridlines]="true"
+                [paginator]="true"
+                [globalFilterFields]="['name', 'country.name', 'representative.name', 'status']"
+                responsiveLayout="scroll"
+            >
+                <ng-template #caption>
+                    <div class="flex justify-between items-center flex-column sm:flex-row">
+                        <button pButton label="Clear" class="p-button-outlined mb-2" icon="pi pi-filter-slash" (click)="clear(dt1)"></button>
+                        <p-iconfield iconPosition="left" class="ml-auto">
+                            <p-inputicon>
+                                <i class="pi pi-search"></i>
+                            </p-inputicon>
+                            <input pInputText type="text" (input)="onGlobalFilter(dt1, $event)" placeholder="Search keyword" #filter />
+                        </p-iconfield>
+                    </div>
+                </ng-template>
+                <ng-template #header>
+                    <tr>
+                        <th style="min-width: 12rem">
+                            <div class="flex justify-between items-center">
+                                Name
+                                <p-columnFilter type="text" field="name" display="menu" placeholder="Search by name"></p-columnFilter>
+                            </div>
+                        </th>
+                        <th style="min-width: 12rem">
+                            <div class="flex justify-between items-center">
+                                Country
+                                <p-columnFilter type="text" field="country.name" display="menu" placeholder="Search by country"></p-columnFilter>
+                            </div>
+                        </th>
+                        <th style="min-width: 14rem">
+                            <div class="flex justify-between items-center">
+                                Agent
+                                <p-columnFilter field="representative" matchMode="in" display="menu" [showMatchModes]="false" [showOperator]="false" [showAddButton]="false">
+                                    <ng-template #header>
+                                        <div class="px-3 pt-3 pb-0">
+                                            <span class="font-bold">Agent Picker</span>
+                                        </div>
+                                    </ng-template>
+                                    <ng-template #filter let-value let-filter="filterCallback">
+                                        <p-multiSelect [ngModel]="value" [options]="representatives" placeholder="Any" (onChange)="filter($event.value)" optionLabel="name" styleClass="w-full">
+                                            <ng-template let-option #item>
+                                                <div class="flex items-center gap-2 w-44">
+                                                    <img [alt]="option.label" [src]="'https://primefaces.org/cdn/primeng/images/demo/avatar/' + option.image" width="32" />
+                                                    <span>{{ option.name }}</span>
+                                                </div>
+                                            </ng-template>
+                                        </p-multiSelect>
+                                    </ng-template>
+                                </p-columnFilter>
+                            </div>
+                        </th>
+                        <th style="min-width: 10rem">
+                            <div class="flex justify-between items-center">
+                                Date
+                                <p-columnFilter type="date" field="date" display="menu" placeholder="mm/dd/yyyy"></p-columnFilter>
+                            </div>
+                        </th>
+                        <th style="min-width: 10rem">
+                            <div class="flex justify-between items-center">
+                                Balance
+                                <p-columnFilter type="numeric" field="balance" display="menu" currency="USD"></p-columnFilter>
+                            </div>
+                        </th>
+                        <th style="min-width: 12rem">
+                            <div class="flex justify-between items-center">
+                                Status
+                                <p-columnFilter field="status" matchMode="equals" display="menu">
+                                    <ng-template #filter let-value let-filter="filterCallback">
+                                        <p-select [ngModel]="value" [options]="statuses" (onChange)="filter($event.value)" placeholder="Any" [style]="{ 'min-width': '12rem' }">
+                                            <ng-template let-option #item>
+                                                <span [class]="'customer-badge status-' + option.value">{{ option.label }}</span>
+                                            </ng-template>
+                                        </p-select>
+                                    </ng-template>
+                                </p-columnFilter>
+                            </div>
+                        </th>
+                        <th style="min-width: 12rem">
+                            <div class="flex justify-between items-center">
+                                Activity
+                                <p-columnFilter field="activity" matchMode="between" display="menu" [showMatchModes]="false" [showOperator]="false" [showAddButton]="false">
+                                    <ng-template #filter let-filter="filterCallback">
+                                        <p-slider [ngModel]="activityValues" [range]="true" (onSlideEnd)="filter($event.values)" styleClass="m-3" [style]="{ 'min-width': '12rem' }"></p-slider>
+                                        <div class="flex items-center justify-between px-2">
+                                            <span>{{ activityValues[0] }}</span>
+                                            <span>{{ activityValues[1] }}</span>
+                                        </div>
+                                    </ng-template>
+                                </p-columnFilter>
+                            </div>
+                        </th>
+                        <th style="min-width: 8rem">
+                            <div class="flex justify-between items-center">
+                                Verified
+                                <p-columnFilter type="boolean" field="verified" display="menu"></p-columnFilter>
+                            </div>
+                        </th>
+                    </tr>
+                </ng-template>
+                <ng-template #body let-customer>
+                    <tr>
+                        <td>
+                            {{ customer.name }}
+                        </td>
+                        <td>
+                            <div class="flex items-center gap-2">
+                                <img src="https://primefaces.org/cdn/primeng/images/demo/flag/flag_placeholder.png" [class]="'flag flag-' + customer.country.code" width="30" />
+                                <span>{{ customer.country.name }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="flex items-center gap-2">
+                                <img [alt]="customer.representative?.name" [src]="'https://primefaces.org/cdn/primeng/images/demo/avatar/' + customer.representative?.image" width="32" style="vertical-align: middle" />
+                                <span class="image-text">{{ customer.representative?.name }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            {{ customer.date | date: 'MM/dd/yyyy' }}
+                        </td>
+                        <td>
+                            {{ customer.balance | currency: 'USD' : 'symbol' }}
+                        </td>
+                        <td>
+                            <p-tag [value]="customer.status.toLowerCase()" [severity]="getSeverity(customer.status.toLowerCase())" styleClass="dark:bg-surface-900!" />
+                        </td>
+                        <td>
+                            <p-progressbar [value]="customer.activity" [showValue]="false" [style]="{ height: '0.5rem' }" />
+                        </td>
+                        <td class="text-center">
+                            <p-tag [value]="customer.status.toLowerCase()" [severity]="getSeverity(customer.status.toLowerCase())" styleClass="dark:bg-surface-900!" />
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template #emptymessage>
+                    <tr>
+                        <td colspan="9">No customers found.</td>
+                    </tr>
+                </ng-template>
+                <ng-template #loadingbody>
+                    <tr>
+                        <td colspan="9">Loading customers data. Please wait.</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
 
-      <div class="grid grid-cols-12 gap-8">
-        <!-- 🧭 Vuelos -->
-        <div class="col-span-12 md:col-span-6 lg:col-span-4">
-          <div class="card shadow-lg rounded-2xl p-4">
-            <div class="flex justify-between items-center mb-4">
-              <span class="font-semibold text-xl text-blue-600">Vuelos programados</span>
-              <button pButton icon="pi pi-plus" class="p-button-rounded p-button-text text-blue-600 hover:text-blue-800"
-                (click)="showForm()"></button>
-            </div>
-            <p-timeline [value]="vuelos" align="alternate">
-              <ng-template #marker let-event>
-                <span class="flex w-8 h-8 items-center justify-center text-white rounded-full shadow"
-                      [style]="{ 'background-color': event.color }">
-                  <i [class]="event.icon"></i>
-                </span>
-              </ng-template>
-              <ng-template #content let-event>
-                <p-card [header]="event.destino" [subheader]="event.fecha">
-                  <p class="text-sm text-gray-700">{{ event.descripcion }}</p>
-                </p-card>
-              </ng-template>
-            </p-timeline>
-          </div>
-        </div>
+        <div class="card">
+            <div class="font-semibold text-xl mb-4">Frozen Columns</div>
+            <p-togglebutton [(ngModel)]="balanceFrozen" [onIcon]="'pi pi-lock'" offIcon="pi pi-lock-open" [onLabel]="'Balance'" offLabel="Balance" />
 
-        <!-- 🧳 Estado del viaje -->
-        <div class="col-span-12 md:col-span-6 lg:col-span-4">
-          <div class="card shadow-lg rounded-2xl p-4">
-            <div class="font-semibold text-xl mb-4 text-purple-600">Estado del viaje</div>
-            <p-timeline [value]="estadoViaje" align="alternate">
-              <ng-template #marker let-event>
-                <span class="flex w-8 h-8 items-center justify-center text-white rounded-full shadow"
-                      [style]="{ 'background-color': event.color }">
-                  <i [class]="event.icon"></i>
-                </span>
-              </ng-template>
-              <ng-template #content let-event>
-                <p-card [header]="event.estado" [subheader]="event.fecha">
-                  <p class="text-sm text-gray-700">{{ event.descripcion }}</p>
-                </p-card>
-              </ng-template>
-            </p-timeline>
-          </div>
-        </div>
+            <p-table [value]="customers2" [scrollable]="true" scrollHeight="400px" styleClass="mt-4">
+                <ng-template #header>
+                    <tr>
+                        <th style="min-width:200px" pFrozenColumn class="font-bold">Name</th>
+                        <th style="min-width:100px">Id</th>
+                        <th style="min-width:200px">Country</th>
+                        <th style="min-width:200px">Date</th>
+                        <th style="min-width:200px">Company</th>
+                        <th style="min-width:200px">Status</th>
+                        <th style="min-width:200px">Activity</th>
+                        <th style="min-width:200px">Representative</th>
+                        <th style="min-width:200px" alignFrozen="right" pFrozenColumn [frozen]="balanceFrozen" [ngClass]="{ 'font-bold': balanceFrozen }">Balance</th>
+                    </tr>
+                </ng-template>
+                <ng-template #body let-customer>
+                    <tr>
+                        <td pFrozenColumn class="font-bold">{{ customer.name }}</td>
+                        <td style="min-width:100px">{{ customer.id }}</td>
+                        <td>{{ customer.country.name }}</td>
+                        <td>{{ customer.date }}</td>
+                        <td>{{ customer.company }}</td>
+                        <td>{{ customer.status }}</td>
+                        <td>{{ customer.activity }}</td>
+                        <td>{{ customer.representative?.name }}</td>
+                        <td alignFrozen="right" pFrozenColumn [frozen]="balanceFrozen" [ngClass]="{ 'font-bold': balanceFrozen }">
+                            {{ formatCurrency(customer.balance) }}
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
 
-        <!-- 🌍 Destinos -->
-        <div class="col-span-12 lg:col-span-4">
-          <div class="card shadow-lg rounded-2xl p-4">
-            <div class="font-semibold text-xl mb-4 text-green-600">Destinos del itinerario</div>
-            <p-timeline [value]="destinos" align="alternate">
-              <ng-template #marker let-event>
-                <span class="flex w-8 h-8 items-center justify-center text-white rounded-full shadow"
-                      [style]="{ 'background-color': event.color }">
-                  <i [class]="event.icon"></i>
-                </span>
-              </ng-template>
-              <ng-template #content let-event>
-                <p-card [header]="event.lugar" [subheader]="event.fecha">
-                  <p class="text-sm text-gray-700">{{ event.descripcion }}</p>
-                </p-card>
-              </ng-template>
-            </p-timeline>
-          </div>
-        </div>
-      </div>
+        <div class="card">
+            <div class="font-semibold text-xl mb-4">Row Expansion</div>
+            <p-table [value]="products" dataKey="id" [tableStyle]="{ 'min-width': '60rem' }" [expandedRowKeys]="expandedRows">
+                <ng-template #caption>
+                    <button pButton icon="pi pi-fw {{ isExpanded ? 'pi-minus' : 'pi-plus' }}" label="{{ isExpanded ? 'Collapse All' : 'Expand All' }}" (click)="expandAll()"></button>
+                    <div class="flex table-header"></div>
+                </ng-template>
+                <ng-template #header>
+                    <tr>
+                        <th style="width: 5rem"></th>
+                        <th pSortableColumn="name">Name <p-sortIcon field="name" /></th>
+                        <th>Image</th>
+                        <th pSortableColumn="price">Price <p-sortIcon field="price" /></th>
+                        <th pSortableColumn="category">Category <p-sortIcon field="category" /></th>
+                        <th pSortableColumn="rating">Reviews <p-sortIcon field="rating" /></th>
+                        <th pSortableColumn="inventoryStatus">Status <p-sortIcon field="inventoryStatus" /></th>
+                    </tr>
+                </ng-template>
+                <ng-template #body let-product let-expanded="expanded">
+                    <tr>
+                        <td>
+                            <p-button type="button" pRipple [pRowToggler]="product" [text]="true" [rounded]="true" [plain]="true" [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" />
+                        </td>
+                        <td>{{ product.name }}</td>
+                        <td>
+                            <img [src]="'https://primefaces.org/cdn/primeng/images/demo/product/' + product.image" [alt]="product.name" width="50" class="shadow-lg" />
+                        </td>
+                        <td>{{ product.price | currency: 'USD' }}</td>
+                        <td>{{ product.category }}</td>
+                        <td>
+                            <p-rating [ngModel]="product.rating" [readonly]="true" />
+                        </td>
+                        <td>
+                            <p-tag [value]="product.inventoryStatus" [severity]="getSeverity(product.inventoryStatus)" />
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template #expandedrow let-product>
+                    <tr>
+                        <td colspan="7">
+                            <div class="p-4">
+                                <h5>Orders for {{ product.name }}</h5>
+                                <p-table [value]="product.orders" dataKey="id">
+                                    <ng-template #header>
+                                        <tr>
+                                            <th pSortableColumn="id">Id <p-sortIcon field="price" /></th>
+                                            <th pSortableColumn="customer">
+                                                Customer
+                                                <p-sortIcon field="customer" />
+                                            </th>
+                                            <th pSortableColumn="date">Date <p-sortIcon field="date" /></th>
+                                            <th pSortableColumn="amount">
+                                                Amount
+                                                <p-sortIcon field="amount" />
+                                            </th>
+                                            <th pSortableColumn="status">
+                                                Status
+                                                <p-sortIcon field="status" />
+                                            </th>
+                                            <th style="width: 4rem"></th>
+                                        </tr>
+                                    </ng-template>
+                                    <ng-template #body let-order>
+                                        <tr>
+                                            <td>{{ order.id }}</td>
+                                            <td>{{ order.customer }}</td>
+                                            <td>{{ order.date }}</td>
+                                            <td>
+                                                {{ order.amount | currency: 'USD' }}
+                                            </td>
+                                            <td>
+                                                <p-tag [value]="order.status" [severity]="getSeverity(order.status)" />
+                                            </td>
+                                            <td>
+                                                <p-button type="button" icon="pi pi-search" />
+                                            </td>
+                                        </tr>
+                                    </ng-template>
+                                    <ng-template #emptymessage>
+                                        <tr>
+                                            <td colspan="6">There are no order for this product yet.</td>
+                                        </tr>
+                                    </ng-template>
+                                </p-table>
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
 
-     <!-- 🏨 Diálogo del formulario -->
-<p-dialog 
-  header="Agregar información del viaje" 
-  [(visible)]="visible" 
-  [modal]="true" 
-  [style]="{ width: '45rem' }" 
-  [closable]="true"
->
-  <form (ngSubmit)="addInfo()" class="flex flex-col gap-4 p-2">
+        <div class="card">
+            <div class="font-semibold text-xl mb-4">Grouping</div>
+            <p-table [value]="customers3" sortField="representative.name" sortMode="single" [scrollable]="true" scrollHeight="400px" rowGroupMode="subheader" groupRowsBy="representative.name" [tableStyle]="{ 'min-width': '60rem' }">
+                <ng-template #header>
+                    <tr>
+                        <th>Name</th>
+                        <th>Country</th>
+                        <th>Company</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                    </tr>
+                </ng-template>
+                <ng-template #groupheader let-customer>
+                    <tr pRowGroupHeader>
+                        <td colspan="5">
+                            <div class="flex items-center gap-2">
+                                <img [alt]="customer.representative?.name" [src]="'https://primefaces.org/cdn/primeng/images/demo/avatar/' + customer.representative?.image" width="32" style="vertical-align: middle" />
+                                <span class="font-bold">{{ customer.representative?.name }}</span>
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template #groupfooter let-customer>
+                    <tr>
+                        <td colspan="5" class="text-right font-bold pr-12">Total Customers: {{ calculateCustomerTotal(customer.representative?.name || '') }}</td>
+                    </tr>
+                </ng-template>
+                <ng-template #body let-customer let-rowIndex="rowIndex">
+                    <tr>
+                        <td>
+                            {{ customer.name }}
+                        </td>
+                        <td>
+                            <div class="flex items-center gap-2">
+                                <img src="https://primefaces.org/cdn/primeng/images/demo/flag/flag_placeholder.png" [class]="'flag flag-' + customer.country.code" style="width: 20px" />
+                                <span>{{ customer.country.name }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            {{ customer.company }}
+                        </td>
+                        <td>
+                            <p-tag [value]="customer.status" [severity]="getSeverity(customer.status)" />
+                        </td>
+                        <td>
+                            {{ customer.date }}
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+    `,
+    styles: [`
+        .p-datatable-frozen-tbody {
+            font-weight: bold;
+        }
 
-    <div>
-      <label class="block font-medium mb-2 text-gray-700">Tipo de información</label>
-      <input 
-        type="text" 
-        pInputText 
-        [(ngModel)]="nuevo.tipo" 
-        name="tipo"
-        class="input-green w-full" 
-        placeholder="Alojamiento, restaurante, sitio..." 
-        required 
-      />
-    </div>
-
-    <div>
-      <label class="block font-medium mb-2 text-gray-700">Nombre o lugar</label>
-      <input 
-        type="text" 
-        pInputText 
-        [(ngModel)]="nuevo.nombre" 
-        name="nombre"
-        class="input-green w-full" 
-        placeholder="Ej. Hotel París" 
-        required 
-      />
-    </div>
-
-    <div>
-      <label class="block font-medium mb-2 text-gray-700">Descripción</label>
-      <textarea 
-        pInputTextarea 
-        [(ngModel)]="nuevo.descripcion" 
-        name="descripcion"
-        class="input-green w-full" 
-        rows="3"
-        placeholder="Breve descripción del sitio" 
-        required
-      ></textarea>
-    </div>
-
-    <button 
-      pButton 
-      label="Guardar" 
-      icon="pi pi-check" 
-      class="w-full p-button-success"
-    ></button>
-  </form>
-</p-dialog>
-
-<style>
-  /* 🎨 Estilo uniforme para todos los inputs */
-  .input-green {
-    width: 100%;
-    border: 1px solid #ccc;
-    border-radius: 0.5rem;
-    padding: 0.75rem;
-    transition: all 0.3s ease;
-  }
-
-  /* 🌿 Color verde suave al hacer focus */
-  .input-green:focus {
-    border-color: #22c55e; /* verde suave */
-    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
-    outline: none;
-  }
-
-  /* 🩶 Textarea con mismo comportamiento */
-  textarea.input-green:focus {
-    border-color: #22c55e;
-    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
-    outline: none;
-  }
-</style>
-
-  `,
-  styles: [`
-    /* 🌿 Estilo verde suave al enfocar */
-    .input-green:focus,
-    textarea.input-green:focus {
-      border-color: #4CAF50 !important;
-      box-shadow: 0 0 6px #A5D6A7 !important;
-      transition: all 0.3s ease-in-out;
-    }
-  `]
+        .p-datatable-scrollable .p-frozen-column {
+            font-weight: bold;
+        }
+    `],
+    // Se mantienen los providers originales que no causaron conflicto de inyección.
+    providers: [ CustomerService, ProductService, ConfirmationService, MessageService ]
 })
-export class Landing {
-  visible = false;
+export class LandingComponent implements OnInit { 
+    customers1: Customer[] = [];
 
-  vuelos = [
-    {
-      destino: 'Bogotá - Madrid',
-      fecha: '12/11/2025 08:00 AM',
-      descripcion: 'Vuelo internacional con escala en Lisboa.',
-      icon: 'pi pi-plane',
-      color: '#2196F3'
-    },
-    {
-      destino: 'Madrid - París',
-      fecha: '14/11/2025 02:00 PM',
-      descripcion: 'Conexión corta de 2 horas. Llegada a Charles de Gaulle.',
-      icon: 'pi pi-send',
-      color: '#9C27B0'
-    },
-    {
-      destino: 'París - Bogotá',
-      fecha: '22/11/2025 09:00 PM',
-      descripcion: 'Vuelo de regreso con Air France.',
-      icon: 'pi pi-home',
-      color: '#4CAF50'
+    customers2: Customer[] = [];
+
+    customers3: Customer[] = [];
+
+    selectedCustomers1: Customer[] = [];
+
+    selectedCustomer: Customer | {} = {};
+
+    representatives: Representative[] = [];
+
+    statuses: any[] = [];
+
+    products: Product[] = [];
+
+    rowGroupMetadata: any;
+
+    expandedRows: expandedRows = {};
+
+    activityValues: number[] = [0, 100];
+
+    isExpanded: boolean = false;
+
+    balanceFrozen: boolean = false;
+
+    loading: boolean = true;
+
+    @ViewChild('filter') filter!: ElementRef; 
+
+    // Constructor corregido: Se eliminó la inyección de PrimeNGConfig.
+    constructor(
+        private customerService: CustomerService,
+        private productService: ProductService,
+        // **OPCIONAL:** Si usas ConfirmationService o MessageService en este componente,
+        // actívalos aquí. Si no, déjalos fuera del constructor y solo en los providers.
+        // Si no los usas en absoluto, elimínalos también de los providers.
+    ) {}
+
+    ngOnInit() {
+        // Lógica eliminada: this.primengConfig.ripple = true;
+
+        this.customerService.getCustomersLarge().then((customers) => {
+            this.customers1 = customers;
+            this.loading = false;
+
+            // @ts-ignore
+            this.customers1.forEach((customer) => (customer.date = new Date(customer.date)));
+        });
+        this.customerService.getCustomersMedium().then((customers) => (this.customers2 = customers));
+        this.customerService.getCustomersLarge().then((customers) => {
+            this.customers3 = customers;
+            this.updateRowGroupMetaData(); 
+        });
+        this.productService.getProductsWithOrdersSmall().then((data) => (this.products = data));
+
+        this.representatives = [
+            { name: 'Amy Elsner', image: 'amyelsner.png' },
+            { name: 'Anna Fali', image: 'annafali.png' },
+            { name: 'Asiya Javayant', image: 'asiyajavayant.png' },
+            { name: 'Bernardo Dominic', image: 'bernardodominic.png' },
+            { name: 'Elwin Sharvill', image: 'elwinsharvill.png' },
+            { name: 'Ioni Bowcher', image: 'ionibowcher.png' },
+            { name: 'Ivan Magalhaes', image: 'ivanmagalhaes.png' },
+            { name: 'Onyama Limba', image: 'onyamalimba.png' },
+            { name: 'Stephen Shaw', image: 'stephenshaw.png' },
+            { name: 'XuXue Feng', image: 'xuxuefeng.png' }
+        ];
+
+        this.statuses = [
+            { label: 'Unqualified', value: 'unqualified' },
+            { label: 'Qualified', value: 'qualified' },
+            { label: 'New', value: 'new' },
+            { label: 'Negotiation', value: 'negotiation' },
+            { label: 'Renewal', value: 'renewal' },
+            { label: 'Proposal', value: 'proposal' }
+        ];
     }
-  ];
 
-  estadoViaje = [
-    { estado: 'Reservado', fecha: '05/11/2025', descripcion: 'Boletos y hoteles confirmados.', icon: 'pi pi-check-circle', color: '#4CAF50' },
-    { estado: 'En proceso', fecha: '10/11/2025', descripcion: 'Preparando equipaje y documentos.', icon: 'pi pi-cog', color: '#FFC107' },
-    { estado: 'Descartado', fecha: '09/11/2025', descripcion: 'El vuelo a Roma fue cancelado.', icon: 'pi pi-times-circle', color: '#F44336' }
-  ];
+    onSort() {
+        this.updateRowGroupMetaData();
+    }
 
-  destinos = [
-    { lugar: 'Madrid 🇪🇸', fecha: '12/11/2025 - 14/11/2025', descripcion: 'Paseo por la Gran Vía y el Museo del Prado.', icon: 'pi pi-map-marker', color: '#3F51B5' },
-    { lugar: 'París 🇫🇷', fecha: '14/11/2025 - 22/11/2025', descripcion: 'Visita a la Torre Eiffel y el Louvre.', icon: 'pi pi-map-marker', color: '#E91E63' }
-  ];
+    updateRowGroupMetaData() {
+        this.rowGroupMetadata = {};
 
-  nuevo = { tipo: '', nombre: '', descripcion: '' };
+        if (this.customers3) {
+            for (let i = 0; i < this.customers3.length; i++) {
+                const rowData = this.customers3[i];
+                const representativeName = rowData?.representative?.name || ''; 
 
-  showForm() {
-    this.visible = true;
-  }
+                if (i === 0) {
+                    this.rowGroupMetadata[representativeName] = { index: 0, size: 1 };
+                } else {
+                    const previousRowData = this.customers3[i - 1];
+                    const previousRowGroup = previousRowData?.representative?.name || ''; 
+                    
+                    if (representativeName === previousRowGroup) {
+                        this.rowGroupMetadata[representativeName].size++;
+                    } else {
+                        this.rowGroupMetadata[representativeName] = { index: i, size: 1 };
+                    }
+                }
+            }
+        }
+    }
 
-  addInfo() {
-    console.log('Nueva información:', this.nuevo);
-    this.nuevo = { tipo: '', nombre: '', descripcion: '' };
-    this.visible = false;
-  }
+    expandAll() {
+        if (ObjectUtils.isEmpty(this.expandedRows)) {
+            this.expandedRows = this.products.reduce(
+                (acc, p) => {
+                    if (p.id) {
+                        acc[p.id] = true;
+                    }
+                    return acc;
+                },
+                {} as { [key: string]: boolean }
+            );
+            this.isExpanded = true;
+        } else {
+            this.collapseAll();
+        }
+    }
+
+    collapseAll() {
+        this.expandedRows = {};
+        this.isExpanded = false;
+    }
+
+    formatCurrency(value: number) {
+        return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    }
+
+    onGlobalFilter(table: Table, event: Event) {
+        table.filterGlobal((event.target as HTMLInputElement).value, 'contains');
+    }
+
+    clear(table: Table) {
+        table.clear();
+        if (this.filter) {
+               this.filter.nativeElement.value = '';
+        }
+    }
+
+    getSeverity(status: string) {
+        switch (status) {
+            case 'qualified':
+            case 'instock':
+            case 'INSTOCK':
+            case 'DELIVERED':
+            case 'delivered':
+                return 'success';
+
+            case 'negotiation':
+            case 'lowstock':
+            case 'LOWSTOCK':
+            case 'PENDING':
+            case 'pending':
+                return 'warn';
+
+            case 'unqualified':
+            case 'outofstock':
+            case 'OUTOFSTOCK':
+            case 'CANCELLED':
+            case 'cancelled':
+                return 'danger';
+
+            default:
+                return 'info';
+        }
+    }
+
+    calculateCustomerTotal(name: string) {
+        let total = 0;
+
+        // Nota: El código original usa this.customers2 para el cálculo en el footer de customers3,
+        // lo mantengo, pero es posible que deba ser 'this.customers3' para ser correcto.
+        if (this.customers2) { 
+            for (let customer of this.customers2) {
+                if (customer.representative?.name === name) {
+                    total++;
+                }
+            }
+        }
+
+        return total;
+    }
 }
+
+export const Landing = LandingComponent; 
