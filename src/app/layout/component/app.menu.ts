@@ -55,6 +55,16 @@ export class AppMenu {
                         routerLink: ['/landing']
                     },
                     {
+                        label: 'Lista de Viaje',
+                        icon: 'pi pi-fw pi-map',
+                        routerLink: ['/lista-viaje']
+                    },
+                    {
+                        label: 'Gestión de Seguros',
+                        icon: 'pi pi-fw pi-shield',
+                        routerLink: ['/seguros']   
+                    },
+                    {
                         label: 'Auth',
                         icon: 'pi pi-fw pi-user',
                         items: [

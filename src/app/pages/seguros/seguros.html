@@ -1,0 +1,84 @@
+<div class="card">
+  <div class="font-semibold text-xl mb-4">Gestión de Seguros de Viaje</div>
+  <p class="text-gray-600 mb-4">
+    Aquí puedes registrar, consultar o comparar los seguros de viaje que has comprado o cotizado, con sus precios, coberturas, fechas y enlaces directos a las aseguradoras.
+  </p>
+
+  <p-togglebutton
+    [(ngModel)]="precioCongelado"
+    [onIcon]="'pi pi-lock'"
+    offIcon="pi pi-lock-open"
+    [onLabel]="'Precio'"
+    offLabel="Precio"
+  ></p-togglebutton>
+
+  <p-table
+    [value]="seguros"
+    [scrollable]="true"
+    scrollHeight="400px"
+    styleClass="mt-4"
+  >
+    <ng-template #header>
+      <tr>
+        <th style="min-width:200px" pFrozenColumn class="font-bold">Nombre del Seguro</th>
+        <th style="min-width:200px">Compañía</th>
+        <th style="min-width:180px">Tipo de Cobertura</th>
+        <th style="min-width:200px">Destino</th>
+        <th style="min-width:150px">Fecha de Inicio</th>
+        <th style="min-width:150px">Fecha de Fin</th>
+        <th style="min-width:200px">Estado</th>
+        <th style="min-width:250px">URL / Cotización</th>
+        <th
+          style="min-width:150px"
+          alignFrozen="right"
+          pFrozenColumn
+          [frozen]="precioCongelado"
+          [ngClass]="{ 'font-bold': precioCongelado }"
+        >
+          Precio (USD)
+        </th>
+      </tr>
+    </ng-template>
+
+    <ng-template #body let-seguro>
+      <tr>
+        <td pFrozenColumn class="font-bold">{{ seguro.nombre }}</td>
+        <td>{{ seguro.compania }}</td>
+        <td>{{ seguro.cobertura }}</td>
+        <td>{{ seguro.destino }}</td>
+        <td>{{ seguro.fechaInicio }}</td>
+        <td>{{ seguro.fechaFin }}</td>
+        <td>
+          <span
+            class="px-2 py-1 rounded-lg text-white text-sm"
+            [ngClass]="{
+              'bg-green-500': seguro.estado === 'Vigente',
+              'bg-yellow-500': seguro.estado === 'Cotizado',
+              'bg-red-500': seguro.estado === 'Expirado'
+            }"
+          >
+            {{ seguro.estado }}
+          </span>
+        </td>
+        <td>
+          <a
+            *ngIf="seguro.url"
+            [href]="seguro.url"
+            target="_blank"
+            class="text-blue-600 hover:underline"
+            >Ver Cotización</a
+          >
+          <span *ngIf="!seguro.url">-</span>
+        </td>
+        <td
+          alignFrozen="right"
+          pFrozenColumn
+          [frozen]="precioCongelado"
+          [ngClass]="{ 'font-bold': precioCongelado }"
+        >
+          {{ formatCurrency(seguro.precio) }}
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>
