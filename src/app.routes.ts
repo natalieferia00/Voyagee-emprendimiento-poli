@@ -12,7 +12,7 @@ import { Gestiondetransporte } from '@/pages/gestiondetransporte/gestiondetransp
 import { GestionAlimentacionComponent } from '@/pages/gestionalimentacion/gestionalimentacion';
 import { ActividadesyExcursionesComponent } from '@/pages/actividadesy-excursiones/actividadesy-excursiones';
 import { PresupuestoComponent } from '@/pages/presupuesto/presupuesto';
-import { CrearNotificacionComponent } from '@/pages/crear-notificacion/crear-notificacion';
+import { CrearNotificacionComponent } from '@/pages/crear-notificaciones/crear-notificaciones';
 
 
 
@@ -29,7 +29,7 @@ export const appRoutes: Routes = [
           { path: 'gestion-alimentacion', component: GestionAlimentacionComponent },
           { path: 'presupuesto', component: PresupuestoComponent},
           { path: 'actividades-y-excursiones', component: ActividadesyExcursionesComponent },
-          { path: 'crear-notificacion', component: CrearNotificacionComponent },
+          { path: 'crear-notificaciones', component: CrearNotificacionComponent },
           { path: 'gestion-transporte', component: Gestiondetransporte },
             { path: 'seguros', component: SegurosComponent },
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
