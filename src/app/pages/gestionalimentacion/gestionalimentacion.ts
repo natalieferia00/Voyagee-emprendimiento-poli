@@ -39,7 +39,7 @@ interface Restaurant {
     ],
     template: `
     <div class="card">
-    <div class="font-semibold text-xl mb-4">Gestión de Restaurantes 🍽️</div>
+    <div class="font-semibold text-xl mb-4">Gestión de Restaurantes</div>
     <p-table [value]="restaurants" [tableStyle]="{ 'min-width': '60rem' }" [paginator]="true" [rows]="5" [rowHover]="true" [showGridlines]="true">
             
             <ng-template #caption>

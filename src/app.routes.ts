@@ -8,9 +8,10 @@ import { MapaRutaComponent } from '@/pages/maparuta/maparuta';
 import { ListaViajeComponent } from '@/pages/lista-viaje/lista-viaje';
 import { SegurosComponent } from '@/pages/seguros/seguros';
 import { CalculadoraGastosComponent } from '@/pages/calculadoragastos/calculadoragastos';
-
 import { Gestiondetransporte } from '@/pages/gestiondetransporte/gestiondetransporte';
 import { GestionAlimentacionComponent } from '@/pages/gestionalimentacion/gestionalimentacion';
+import { ActividadesyExcursionesComponent } from '@/pages/actividadesy-excursiones/actividadesy-excursiones';
+import { PresupuestoComponent } from '@/pages/presupuesto/presupuesto';
 
 
 
@@ -25,6 +26,8 @@ export const appRoutes: Routes = [
             { path: 'calculadora-gastos', component: CalculadoraGastosComponent },
             { path: 'mapa-ruta', component: MapaRutaComponent },
           { path: 'gestion-alimentacion', component: GestionAlimentacionComponent },
+          { path: 'presupuesto', component: PresupuestoComponent},
+          { path: 'actividades-y-excursiones', component: ActividadesyExcursionesComponent },
           { path: 'gestion-transporte', component: Gestiondetransporte },
             { path: 'seguros', component: SegurosComponent },
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },

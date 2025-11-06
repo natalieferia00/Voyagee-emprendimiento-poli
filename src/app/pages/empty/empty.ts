@@ -29,6 +29,7 @@ interface Flight {
   status: string;
   description: string;
   progress: number;
+  url: string; // ✅ Nuevo campo para la URL
 }
 
 // ✅ Extendemos para incluir la fecha convertida
@@ -59,7 +60,7 @@ interface FlightWithParsedDate extends Flight {
   ],
   template: `
     <div class="card">
-      <div class="font-semibold text-xl mb-4">Gestión de Vuelos </div>
+      <div class="font-semibold text-xl mb-4">Gestión de Vuelos</div>
 
       <p-table
         #dt1
@@ -106,6 +107,7 @@ interface FlightWithParsedDate extends Flight {
             <th>Estado</th>
             <th>Descripción</th>
             <th>Progreso</th>
+            <th>URL</th> <!-- ✅ Nueva columna -->
           </tr>
         </ng-template>
 
@@ -130,27 +132,38 @@ interface FlightWithParsedDate extends Flight {
                 [style]="{ height: '0.5rem' }"
               ></p-progressbar>
             </td>
+            <td>
+              <a
+                *ngIf="flight.url"
+                [href]="flight.url"
+                target="_blank"
+                class="text-blue-500 underline"
+                >Ver vuelo</a
+              >
+            </td>
           </tr>
         </ng-template>
 
         <ng-template #emptymessage>
-          <tr><td colspan="8">No se encontraron vuelos.</td></tr>
+          <tr><td colspan="9">No se encontraron vuelos.</td></tr>
         </ng-template>
 
         <ng-template #loadingbody>
-          <tr><td colspan="8">Cargando datos...</td></tr>
+          <tr><td colspan="9">Cargando datos...</td></tr>
         </ng-template>
       </p-table>
     </div>
   `,
-  styles: [`
-    .p-datatable-frozen-tbody {
-      font-weight: bold;
-    }
-    .p-datatable-scrollable .p-frozen-column {
-      font-weight: bold;
-    }
-  `],
+  styles: [
+    `
+      .p-datatable-frozen-tbody {
+        font-weight: bold;
+      }
+      .p-datatable-scrollable .p-frozen-column {
+        font-weight: bold;
+      }
+    `
+  ],
   providers: [ConfirmationService, MessageService]
 })
 export class Empty implements OnInit {
@@ -170,7 +183,8 @@ export class Empty implements OnInit {
         price: 180.5,
         status: 'Reservado',
         description: 'Vuelo nacional con escala corta.',
-        progress: 100
+        progress: 100,
+        url: 'https://www.avianca.com/co/es' // ✅ Ejemplo URL
       },
       {
         id: 2,
@@ -181,7 +195,8 @@ export class Empty implements OnInit {
         price: 230,
         status: 'En proceso',
         description: 'Vuelo programado sujeto a confirmación.',
-        progress: 60
+        progress: 60,
+        url: 'https://www.latamairlines.com/co/es'
       },
       {
         id: 3,
@@ -192,7 +207,8 @@ export class Empty implements OnInit {
         price: 900,
         status: 'Descartado',
         description: 'Vuelo cancelado por mantenimiento.',
-        progress: 0
+        progress: 0,
+        url: 'https://www.iberia.com/co/'
       }
     ];
 
@@ -214,7 +230,6 @@ export class Empty implements OnInit {
     if (this.filter) this.filter.nativeElement.value = '';
   }
 
-  // 🎨 Tipado corregido: solo devuelve valores válidos
   getSeverity(status: string): 'success' | 'info' | 'warn' | 'danger' | null {
     switch (status.toLowerCase()) {
       case 'reservado':

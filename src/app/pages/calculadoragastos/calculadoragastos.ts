@@ -1,11 +1,10 @@
-import { Component, OnInit, ChangeDetectionStrategy, inject } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, inject, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MessageService } from 'primeng/api';
-import { ConfirmationService } from 'primeng/api';
+import { MessageService, ConfirmationService } from 'primeng/api';
 
-// Importaciones de Componentes PrimeNG
-import { TableModule } from 'primeng/table';
+// PrimeNG Components
+import { Table, TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -15,253 +14,221 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TagModule } from 'primeng/tag';
 import { CardModule } from 'primeng/card';
 import { DividerModule } from 'primeng/divider';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
 
-// Interfaz para la estructura del gasto
 interface Gasto {
-  id: number;
-  descripcion: string;
-  monto: number;
-  categoria: string;
+  id: number;
+  pais: string;
+  nombre: string;
+  descripcion: string;
+  monto: number;
 }
 
 @Component({
-  selector: 'app-calculadoragastos', 
-  standalone: true, 
-  imports: [
-    CommonModule,
-    FormsModule,
-    CurrencyPipe,
+  selector: 'app-calculadora-gastos',
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    CurrencyPipe,
+    TableModule,
+    ButtonModule,
+    InputTextModule,
+    InputNumberModule,
+    DialogModule,
+    ToastModule,
+    ConfirmDialogModule,
+    TagModule,
+    CardModule,
+    DividerModule,
+    IconFieldModule,
+    InputIconModule
+  ],
+  providers: [MessageService, ConfirmationService],
+  template: `
+    <p-toast></p-toast>
+    <p-confirmDialog [style]="{width: '40vw'}" [baseZIndex]="10000" acceptLabel="Sí, eliminar" rejectLabel="No"></p-confirmDialog>
 
-    // Módulos de PrimeNG
-    TableModule,
-    ButtonModule,
-    InputTextModule,
-    InputNumberModule,
-    DialogModule,
-    ToastModule,
-    ConfirmDialogModule,
-    TagModule,
-    CardModule,
-    DividerModule
-  ],
-  providers: [
-    MessageService, 
-    ConfirmationService
-],
-  template: `
-    <p-toast></p-toast> 
-    <p-confirmDialog [style]="{width: '50vw'}" [baseZIndex]="10000" acceptLabel="Sí, Eliminar" rejectLabel="No"></p-confirmDialog>
+    <div class="p-5">
+      <p-card header="Calculadora de Gastos de Viaje" styleClass="shadow-2xl">
+        <ng-template pTemplate="subtitle">
+          Administra tus gastos de viaje por país.
+        </ng-template>
 
-    <div class="p-5">
-        <p-card header="Calculadora de Gastos de Viaje" styleClass="shadow-2xl">
-            <ng-template pTemplate="subtitle">
-                Gestión eficiente de tus gastos de viaje.
-            </ng-template>
+        <div class="flex justify-content-between align-items-center mb-3 p-3 border-round surface-100 border-1 surface-border">
+          <div class="flex align-items-center gap-3">
+            <p-button label="Añadir Gasto" icon="pi pi-plus" (onClick)="showNewExpenseDialog()" styleClass="p-button-success"></p-button>
+          </div>
 
-            <div class="flex justify-content-between align-items-center mb-4 p-4 border-round surface-100 border-1 surface-border">
-                <p class="text-xl font-medium text-color">
-                    Total de Gastos: 
-                    <span class="font-bold text-2xl text-primary block sm:inline">
-                        {{ totalGastos | currency: 'USD': 'symbol': '1.2-2': 'es-US' }}
-                    </span>
-                </p>
-                <p-button 
-                    label="Añadir Gasto" 
-                    icon="pi pi-plus" 
-                    (onClick)="showNewExpenseDialog()"
-                    styleClass="p-button-success p-button-sm">
-                </p-button>
-            </div>
+          <p-iconfield iconPosition="left">
+            <p-inputicon>
+              <i class="pi pi-search"></i>
+            </p-inputicon>
+            <input #filterInput pInputText type="text" placeholder="Buscar..." (input)="onGlobalFilter($event, dt)" />
+          </p-iconfield>
+        </div>
 
-            <p-divider></p-divider>
-            <p-table 
-                [value]="gastos" 
-                [tableStyle]="{'min-width': '10rem'}" 
-                styleClass="p-datatable-gridlines p-datatable-sm shadow-2">
-                <ng-template pTemplate="header">
-                    <tr>
-                        <th pSortableColumn="categoria" style="width:20%">Categoría <p-sortIcon field="categoria"></p-sortIcon></th>
-                        <th pSortableColumn="descripcion" style="width:40%">Descripción <p-sortIcon field="descripcion"></p-sortIcon></th>
-                        <th pSortableColumn="monto" style="width:20%">Monto <p-sortIcon field="monto"></p-sortIcon></th>
-                        <th style="width:20%">Acciones</th>
-                    </tr>
-                </ng-template>
-                <ng-template pTemplate="body" let-gasto>
-                    <tr>
-                        <td>
-                            <p-tag [value]="gasto.categoria" [severity]="getSeverity(gasto.categoria)"></p-tag>
-                        </td>
-                        <td>{{ gasto.descripcion }}</td>
-                        <td class="font-bold text-gray-700">
-                            {{ gasto.monto | currency: 'USD': 'symbol': '1.2-2': 'es-US' }}
-                        </td>
-                        <td>
-                            <p-button 
-                                icon="pi pi-trash" 
-                                (onClick)="confirmarEliminarGasto(gasto)" 
-                                styleClass="p-button-rounded p-button-danger p-button-text">
-                            </p-button>
-                        </td>
-                    </tr>
-                </ng-template>
-                <ng-template pTemplate="emptymessage">
-                    <tr>
-                        <td colspan="4" class="text-center p-6 text-gray-500 text-base italic">No hay gastos registrados. ¡Empieza a añadir uno!</td>
-                    </tr>
-                </ng-template>
-                <ng-template pTemplate="summary">
-                    <div class="flex justify-content-end font-bold text-lg">
-                        Total General: {{ totalGastos | currency: 'USD': 'symbol': '1.2-2': 'es-US' }}
-                    </div>
-                </ng-template>
-            </p-table>
+        <p-table #dt
+          [value]="gastos"
+          dataKey="id"
+          [rows]="10"
+          [paginator]="true"
+          [showGridlines]="true"
+          [rowHover]="true"
+          [globalFilterFields]="['pais', 'nombre', 'descripcion']"
+          responsiveLayout="scroll"
+          styleClass="p-datatable-sm p-datatable-gridlines shadow-2">
 
-        </p-card>
-    </div>
+          <ng-template pTemplate="header">
+            <tr>
+              <th pSortableColumn="pais" style="width:15%">País <p-sortIcon field="pais"></p-sortIcon></th>
+              <th pSortableColumn="nombre" style="width:20%">Nombre del Gasto <p-sortIcon field="nombre"></p-sortIcon></th>
+              <th style="width:35%">Descripción</th>
+              <th pSortableColumn="monto" style="width:15%">Monto <p-sortIcon field="monto"></p-sortIcon></th>
+              <th style="width:15%">Acciones</th>
+            </tr>
+          </ng-template>
 
-    <p-dialog 
-        header="Añadir Nuevo Gasto" 
-        [(visible)]="displayDialog" 
-        [modal]="true" 
-        [style]="{width: '25vw'}" 
-        [breakpoints]="{'960px': '75vw'}">
-        
-        <div class="p-fluid grid formgrid">
-            <div class="field col-12">
-                <label for="monto">Monto ($)</label>
-                <p-inputNumber 
-                    id="monto" 
-                    [(ngModel)]="nuevoGasto.monto" 
-                    [min]="0" 
-                    mode="currency" 
-                    currency="USD" 
-                    locale="es-US"
-                    required>
-                </p-inputNumber>
-            </div>
+          <ng-template pTemplate="body" let-gasto>
+            <tr>
+              <td><p-tag [value]="gasto.pais" severity="info"></p-tag></td>
+              <td>{{ gasto.nombre }}</td>
+              <td>{{ gasto.descripcion }}</td>
+              <td class="font-bold text-right">{{ gasto.monto | currency:'USD':'symbol':'1.2-2':'es-US' }}</td>
+              <td class="text-center">
+                <p-button icon="pi pi-pencil" (onClick)="editarGasto(gasto)" styleClass="p-button-rounded p-button-warning p-button-text"></p-button>
+                <p-button icon="pi pi-trash" (onClick)="confirmarEliminarGasto(gasto)" styleClass="p-button-rounded p-button-danger p-button-text"></p-button>
+              </td>
+            </tr>
+          </ng-template>
 
-            <div class="field col-12">
-                <label for="descripcion">Descripción</label>
-                <input 
-                    pInputText 
-                    id="descripcion" 
-                    type="text" 
-                    [(ngModel)]="nuevoGasto.descripcion" 
-                    placeholder="Ej: Boleto de bus, Cena, Souvenir" 
-                    required/>
-            </div>
+          <ng-template pTemplate="emptymessage">
+            <tr><td colspan="5" class="text-center p-4 text-gray-500">No hay gastos registrados.</td></tr>
+          </ng-template>
 
-            <div class="field col-12">
-                <label for="categoria">Categoría</label>
-                <input 
-                    pInputText 
-                    id="categoria" 
-                    type="text" 
-                    [(ngModel)]="nuevoGasto.categoria" 
-                    placeholder="Ej: Transporte, Comida, Alojamiento" 
-                    required/>
-            </div>
-        </div>
+          <ng-template pTemplate="summary">
+            <div class="flex justify-content-end text-lg font-semibold">
+              Total: {{ totalGastos | currency:'USD':'symbol':'1.2-2':'es-US' }}
+            </div>
+          </ng-template>
+        </p-table>
+      </p-card>
+    </div>
 
-        <ng-template pTemplate="footer">
-            <p-button label="Cancelar" icon="pi pi-times" (onClick)="displayDialog=false" styleClass="p-button-text"></p-button>
-            <p-button label="Guardar" icon="pi pi-check" (onClick)="guardarGasto()"></p-button>
-        </ng-template>
-    </p-dialog>
-  `,
-  changeDetection: ChangeDetectionStrategy.OnPush,
+    <!-- Diálogo para crear/editar -->
+    <p-dialog 
+      header="{{ editando ? 'Editar Gasto' : 'Añadir Gasto' }}" 
+      [(visible)]="displayDialog" 
+      [modal]="true" 
+      [style]="{width: '30vw'}" 
+      [breakpoints]="{'960px': '75vw'}">
+      
+      <div class="p-fluid">
+        <div class="field">
+          <label>País</label>
+          <input pInputText [(ngModel)]="nuevoGasto.pais" placeholder="Ej: Perú" required />
+        </div>
+        <div class="field">
+          <label>Nombre del gasto</label>
+          <input pInputText [(ngModel)]="nuevoGasto.nombre" placeholder="Ej: Hotel Miramar" required />
+        </div>
+        <div class="field">
+          <label>Descripción</label>
+          <input pInputText [(ngModel)]="nuevoGasto.descripcion" placeholder="Ej: 3 noches con desayuno" required />
+        </div>
+        <div class="field">
+          <label>Monto (USD)</label>
+          <p-inputNumber [(ngModel)]="nuevoGasto.monto" mode="currency" currency="USD" locale="es-US" [min]="0"></p-inputNumber>
+        </div>
+      </div>
+
+      <ng-template pTemplate="footer">
+        <p-button label="Cancelar" icon="pi pi-times" (onClick)="displayDialog=false" styleClass="p-button-text"></p-button>
+        <p-button label="Guardar" icon="pi pi-check" (onClick)="guardarGasto()"></p-button>
+      </ng-template>
+    </p-dialog>
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CalculadoraGastosComponent implements OnInit {
-  private messageService = inject(MessageService);
-  private confirmationService = inject(ConfirmationService);
+  private messageService = inject(MessageService);
+  private confirmationService = inject(ConfirmationService);
 
-  // Propiedades
-  gastos: Gasto[] = [];
-  nuevoGasto: Gasto = this.resetGasto();
-  displayDialog: boolean = false;
-  totalGastos: number = 0;
-  nextId: number = 1;
-  
-  constructor() { }
+  @ViewChild('filterInput') filterInput!: ElementRef;
+  gastos: Gasto[] = [];
+  nuevoGasto: Gasto = this.resetGasto();
+  displayDialog = false;
+  editando = false;
+  totalGastos = 0;
+  nextId = 1;
 
-  ngOnInit() {
-    // Datos de ejemplo iniciales
-    this.gastos = [
-      { id: this.nextId++, descripcion: 'Vuelo Santiago-Lima', monto: 350.50, categoria: 'Transporte' },
-      { id: this.nextId++, descripcion: 'Noche Hotel 1', monto: 85.00, categoria: 'Alojamiento' },
-      { id: this.nextId++, descripcion: 'Comida Día 1', monto: 45.75, categoria: 'Comida' },
-      { id: this.nextId++, descripcion: 'Entrada Museo', monto: 20.00, categoria: 'Ocio' },
-    ];
-    this.calcularTotal();
-  }
+  ngOnInit() {
+    this.gastos = [
+      { id: this.nextId++, pais: 'Perú', nombre: 'Hotel Miraflores', descripcion: '2 noches con desayuno', monto: 150 },
+      { id: this.nextId++, pais: 'Chile', nombre: 'Transporte Urbano', descripcion: 'Tarjeta bip y metro', monto: 30 },
+      { id: this.nextId++, pais: 'México', nombre: 'Comida Día 1', descripcion: 'Cena en restaurante local', monto: 25 }
+    ];
+    this.calcularTotal();
+  }
+  
 
-  /**
-   * Genera la severidad de PrimeNG para el color del Tag basado en la categoría.
-   * Ajustado para usar 'warn' y 'contrast' para cumplir con el tipado estricto del componente p-tag.
-   */
-  getSeverity(categoria: string): 'warn' | 'success' | 'info' | 'danger' | 'secondary' | 'contrast' {
-    const lowerCaseCat = categoria.toLowerCase();
-    // Corregido: 'warning' -> 'warn'
-    if (lowerCaseCat.includes('transporte')) return 'warn'; 
-    if (lowerCaseCat.includes('comida') || lowerCaseCat.includes('alimento')) return 'success';
-    if (lowerCaseCat.includes('alojamiento') || lowerCaseCat.includes('hotel')) return 'info';
-    // Corregido: 'help' -> 'contrast'
-    if (lowerCaseCat.includes('ocio') || lowerCaseCat.includes('entretenimiento')) return 'contrast'; 
-    return 'secondary';
-  }
+  onGlobalFilter(event: Event, table: Table) {
+    table.filterGlobal((event.target as HTMLInputElement).value, 'contains');
+  }
 
-  resetGasto(): Gasto {
-    return { id: 0, descripcion: '', monto: 0, categoria: '' };
-  }
+  resetGasto(): Gasto {
+    return { id: 0, pais: '', nombre: '', descripcion: '', monto: 0 };
+  }
 
-  calcularTotal() {
-    this.totalGastos = this.gastos.reduce((sum, gasto) => sum + gasto.monto, 0);
-  }
+  calcularTotal() {
+    this.totalGastos = this.gastos.reduce((acc, g) => acc + g.monto, 0);
+  }
 
-  showNewExpenseDialog() {
-    this.nuevoGasto = this.resetGasto();
-    this.displayDialog = true;
-  }
+  showNewExpenseDialog() {
+    this.nuevoGasto = this.resetGasto();
+    this.displayDialog = true;
+    this.editando = false;
+  }
 
-  guardarGasto() {
-    // Asegurarse de que monto no sea null si el input es vacío y usar parseFloat por si acaso
-    const monto = parseFloat(this.nuevoGasto.monto as unknown as string);
-    const montoValido = !isNaN(monto) && monto > 0;
+  editarGasto(gasto: Gasto) {
+    this.nuevoGasto = { ...gasto };
+    this.displayDialog = true;
+    this.editando = true;
+  }
 
-    if (montoValido && this.nuevoGasto.descripcion.trim() && this.nuevoGasto.categoria.trim()) {
-      
-      this.nuevoGasto.id = this.nextId++;
-      this.nuevoGasto.monto = monto;
+  guardarGasto() {
+    if (!this.nuevoGasto.pais.trim() || !this.nuevoGasto.nombre.trim() || this.nuevoGasto.monto <= 0) {
+      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Completa todos los campos correctamente.' });
+      return;
+    }
 
-      this.gastos = [...this.gastos, this.nuevoGasto]; 
-      
-      this.calcularTotal();
-      this.displayDialog = false;
-      
-      this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Gasto añadido correctamente.' });
-    } else {
-      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Por favor, rellena todos los campos con valores válidos.' });
-    }
-  }
+    if (this.editando) {
+      const index = this.gastos.findIndex(g => g.id === this.nuevoGasto.id);
+      if (index >= 0) this.gastos[index] = { ...this.nuevoGasto };
+      this.messageService.add({ severity: 'success', summary: 'Actualizado', detail: 'Gasto actualizado correctamente.' });
+    } else {
+      this.nuevoGasto.id = this.nextId++;
+      this.gastos = [...this.gastos, this.nuevoGasto];
+      this.messageService.add({ severity: 'success', summary: 'Añadido', detail: 'Gasto añadido correctamente.' });
+    }
 
-  confirmarEliminarGasto(gasto: Gasto) {
-    this.confirmationService.confirm({
-      message: `¿Estás seguro de que quieres eliminar el gasto: **${gasto.descripcion}**?`,
-      header: 'Confirmación de Eliminación',
-      icon: 'pi pi-exclamation-triangle',
-      accept: () => {
-        this.eliminarGasto(gasto.id);
-      },
-      reject: () => {
-        // Cancelado
-      }
-    });
-  }
+    this.displayDialog = false;
+    this.calcularTotal();
+  }
 
-  eliminarGasto(id: number) {
-    this.gastos = this.gastos.filter(g => g.id !== id);
-    this.calcularTotal();
+  confirmarEliminarGasto(gasto: Gasto) {
+    this.confirmationService.confirm({
+      message: `¿Deseas eliminar el gasto "${gasto.nombre}" de ${gasto.pais}?`,
+      header: 'Confirmar eliminación',
+      icon: 'pi pi-exclamation-triangle',
+      accept: () => this.eliminarGasto(gasto.id)
+    });
+  }
 
-    this.messageService.add({ severity: 'info', summary: 'Eliminado', detail: 'Gasto eliminado.' });
-  }
+  eliminarGasto(id: number) {
+    this.gastos = this.gastos.filter(g => g.id !== id);
+    this.calcularTotal();
+    this.messageService.add({ severity: 'info', summary: 'Eliminado', detail: 'Gasto eliminado correctamente.' });
+  }
 }

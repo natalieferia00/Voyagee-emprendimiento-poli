@@ -49,11 +49,7 @@ export class AppMenu {
                 icon: 'pi pi-fw pi-briefcase',
                 routerLink: ['/pages'],
                 items: [
-                    {
-                        label: 'Presupuesto',
-                        icon: 'pi pi-fw pi-globe',
-                        routerLink: ['/landing']
-                    },
+                   
                     {
                         label: 'Lista de Viaje',
                         icon: 'pi pi-fw pi-map',
@@ -69,10 +65,20 @@ export class AppMenu {
                         icon: 'pi pi-fw pi-box',
                         routerLink: ['/gestion-alimentacion']
                     },
-                    { 
+                    {
                         label: 'Gestión de Transporte',
-                        icon: 'pi pi-fw pi-circle-off', 
+                        icon: 'pi pi-fw pi-circle-off',
                         routerLink: ['/gestion-transporte']
+                    },
+                    {
+                        label: 'Presupuesto',
+                        icon: 'pi pi-fw pi-globe',
+                        routerLink: ['/presupuesto']
+                    },
+                    {
+                        label: 'Actividades y Excursiones',
+                        icon: 'pi pi-fw pi-sun',
+                        routerLink: ['/actividades-y-excursiones']
                     },
                     {
                         label: 'Gestión de Seguros',
@@ -84,37 +90,13 @@ export class AppMenu {
                         icon: 'pi pi-fw pi-map-marker',
                         routerLink: ['/mapa-ruta']
                     },
-                    {
-                        label: 'Auth',
-                        icon: 'pi pi-fw pi-user',
-                        items: [
-                            {
-                                label: 'Login',
-                                icon: 'pi pi-fw pi-sign-in',
-                                routerLink: ['/auth/login']
-                            },
-                            {
-                                label: 'Error',
-                                icon: 'pi pi-fw pi-times-circle',
-                                routerLink: ['/auth/error']
-                            },
-                            {
-                                label: 'Access Denied',
-                                icon: 'pi pi-fw pi-lock',
-                                routerLink: ['/auth/access']
-                            }
-                        ]
-                    },
+                   
                     {
                         label: 'Alojamientos',
                         icon: 'pi pi-fw pi-pencil',
                         routerLink: ['/pages/crud']
                     },
-                    {
-                        label: 'Not Found',
-                        icon: 'pi pi-fw pi-exclamation-circle',
-                        routerLink: ['/pages/notfound']
-                    },
+                   
                     {
                         label: 'Gestion de vuelos',
                         icon: 'pi pi-fw pi-circle-off',
@@ -122,66 +104,18 @@ export class AppMenu {
                     }
                 ]
             },
-            {
-                label: 'Hierarchy',
-                items: [
-                    {
-                        label: 'Submenu 1',
-                        icon: 'pi pi-fw pi-bookmark',
+             {
+                        label: 'Auth',
+                        icon: 'pi pi-fw pi-user',
                         items: [
                             {
-                                label: 'Submenu 1.1',
-                                icon: 'pi pi-fw pi-bookmark',
-                                items: [
-                                    { label: 'Submenu 1.1.1', icon: 'pi pi-fw pi-bookmark' },
-                                    { label: 'Submenu 1.1.2', icon: 'pi pi-fw pi-bookmark' },
-                                    { label: 'Submenu 1.1.3', icon: 'pi pi-fw pi-bookmark' }
-                                ]
-                            },
-                            {
-                                label: 'Submenu 1.2',
-                                icon: 'pi pi-fw pi-bookmark',
-                                items: [{ label: 'Submenu 1.2.1', icon: 'pi pi-fw pi-bookmark' }]
+                                label: 'Login',
+                                icon: 'pi pi-fw pi-sign-in',
+                                routerLink: ['/auth/login']
                             }
                         ]
                     },
-                    {
-                        label: 'Submenu 2',
-                        icon: 'pi pi-fw pi-bookmark',
-                        items: [
-                            {
-                                label: 'Submenu 2.1',
-                                icon: 'pi pi-fw pi-bookmark',
-                                items: [
-                                    { label: 'Submenu 2.1.1', icon: 'pi pi-fw pi-bookmark' },
-                                    { label: 'Submenu 2.1.2', icon: 'pi pi-fw pi-bookmark' }
-                                ]
-                            },
-                            {
-                                label: 'Submenu 2.2',
-                                icon: 'pi pi-fw pi-bookmark',
-                                items: [{ label: 'Submenu 2.2.1', icon: 'pi pi-fw pi-bookmark' }]
-                            }
-                        ]
-                    }
-                ]
-            },
-            {
-                label: 'Get Started',
-                items: [
-                    {
-                        label: 'Documentation',
-                        icon: 'pi pi-fw pi-book',
-                        routerLink: ['/documentation']
-                    },
-                    {
-                        label: 'View Source',
-                        icon: 'pi pi-fw pi-github',
-                        url: 'https://github.com/primefaces/sakai-ng',
-                        target: '_blank'
-                    }
-                ]
-            }
+           
         ];
     }
 }
