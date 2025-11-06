@@ -47,7 +47,7 @@
 
         <div class="card">
         <div class="flex justify-between items-center mb-4">
-            <h2 class="font-semibold text-xl">Gestión de Notificaciones</h2>
+            <h2 class="font-semibold text-xl">Crear Notificaciones</h2>
             <button
             pButton
             label="Nueva Notificación"

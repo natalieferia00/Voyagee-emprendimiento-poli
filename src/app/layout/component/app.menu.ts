@@ -49,7 +49,6 @@ export class AppMenu {
                 icon: 'pi pi-fw pi-briefcase',
                 routerLink: ['/pages'],
                 items: [
-                   
                     {
                         label: 'Lista de Viaje',
                         icon: 'pi pi-fw pi-map',
@@ -86,17 +85,22 @@ export class AppMenu {
                         routerLink: ['/seguros']
                     },
                     {
+                        label: 'Crear Notificaciones',
+                        icon: 'pi pi-fw pi-bell',
+                        routerLink: ['/crear-notificaciones']
+                    },
+                    {
                         label: 'Mapa de Ruta',
                         icon: 'pi pi-fw pi-map-marker',
                         routerLink: ['/mapa-ruta']
                     },
-                   
+
                     {
                         label: 'Alojamientos',
                         icon: 'pi pi-fw pi-pencil',
                         routerLink: ['/pages/crud']
                     },
-                   
+
                     {
                         label: 'Gestion de vuelos',
                         icon: 'pi pi-fw pi-circle-off',
@@ -104,18 +108,17 @@ export class AppMenu {
                     }
                 ]
             },
-             {
-                        label: 'Auth',
-                        icon: 'pi pi-fw pi-user',
-                        items: [
-                            {
-                                label: 'Login',
-                                icon: 'pi pi-fw pi-sign-in',
-                                routerLink: ['/auth/login']
-                            }
-                        ]
-                    },
-           
+            {
+                label: 'Auth',
+                icon: 'pi pi-fw pi-user',
+                items: [
+                    {
+                        label: 'Login',
+                        icon: 'pi pi-fw pi-sign-in',
+                        routerLink: ['/auth/login']
+                    }
+                ]
+            }
         ];
     }
 }
