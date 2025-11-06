@@ -1,9 +1,8 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, CurrencyPipe } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { CardModule } from 'primeng/card';
-import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InputIconModule } from 'primeng/inputicon';
 import { IconFieldModule } from 'primeng/iconfield';
@@ -12,6 +11,7 @@ import { InputTextModule } from 'primeng/inputtext';
 
 export interface Presupuesto {
   pais: string;
+  ciudad: string;
   bandera: string;
   total: number;
 }
@@ -33,9 +33,9 @@ export interface Presupuesto {
   ],
   template: `
   <div class="p-5">
-    <p-card header="Presupuesto por País" styleClass="shadow-3">
+    <p-card header="Presupuesto por País y Ciudad" styleClass="shadow-3">
       <ng-template pTemplate="subtitle">
-        Visualiza el presupuesto total por país, incluyendo su bandera.
+        Visualiza el presupuesto total por país y ciudad, incluyendo su bandera.
       </ng-template>
 
       <!-- Buscador -->
@@ -46,7 +46,7 @@ export interface Presupuesto {
 
         <p-iconfield iconPosition="left">
           <p-inputicon><i class="pi pi-search"></i></p-inputicon>
-          <input pInputText type="text" placeholder="Buscar país..." (input)="filtrar($event)" />
+          <input pInputText type="text" placeholder="Buscar país o ciudad..." (input)="filtrar($event)" />
         </p-iconfield>
       </div>
 
@@ -62,9 +62,10 @@ export interface Presupuesto {
 
         <ng-template pTemplate="header">
           <tr>
-            <th style="width:15%">Bandera</th>
-            <th pSortableColumn="pais" style="width:45%">País <p-sortIcon field="pais"></p-sortIcon></th>
-            <th pSortableColumn="total" style="width:40%">Presupuesto Total <p-sortIcon field="total"></p-sortIcon></th>
+            <th style="width:10%">Bandera</th>
+            <th pSortableColumn="pais" style="width:30%">País <p-sortIcon field="pais"></p-sortIcon></th>
+            <th pSortableColumn="ciudad" style="width:30%">Ciudad <p-sortIcon field="ciudad"></p-sortIcon></th>
+            <th pSortableColumn="total" style="width:30%">Presupuesto Total <p-sortIcon field="total"></p-sortIcon></th>
           </tr>
         </ng-template>
 
@@ -74,13 +75,14 @@ export interface Presupuesto {
               <img [src]="p.bandera" [alt]="p.pais" width="40" height="28" style="border-radius: 4px; box-shadow: 0 0 2px rgba(0,0,0,0.2);" />
             </td>
             <td>{{ p.pais }}</td>
+            <td>{{ p.ciudad }}</td>
             <td class="font-bold text-right">{{ p.total | currency:'USD':'symbol':'1.2-2':'es-US' }}</td>
           </tr>
         </ng-template>
 
         <ng-template pTemplate="emptymessage">
           <tr>
-            <td colspan="3" class="text-center p-4 text-gray-500">No hay presupuestos registrados.</td>
+            <td colspan="4" class="text-center p-4 text-gray-500">No hay presupuestos registrados.</td>
           </tr>
         </ng-template>
 
@@ -102,9 +104,9 @@ export class PresupuestoComponent implements OnInit {
   ngOnInit() {
     // Datos de ejemplo
     this.presupuestos = [
-      { pais: 'Perú', bandera: 'https://flagcdn.com/w40/pe.png', total: 1200 },
-      { pais: 'Chile', bandera: 'https://flagcdn.com/w40/cl.png', total: 900 },
-      { pais: 'México', bandera: 'https://flagcdn.com/w40/mx.png', total: 1500 }
+      { pais: 'Perú', ciudad: 'Lima', bandera: 'https://flagcdn.com/w40/pe.png', total: 1200 },
+      { pais: 'Chile', ciudad: 'Santiago', bandera: 'https://flagcdn.com/w40/cl.png', total: 900 },
+      { pais: 'México', ciudad: 'Ciudad de México', bandera: 'https://flagcdn.com/w40/mx.png', total: 1500 }
     ];
     this.presupuestosFiltrados = [...this.presupuestos];
     this.calcularTotal();
@@ -117,17 +119,23 @@ export class PresupuestoComponent implements OnInit {
   filtrar(event: Event) {
     const valor = (event.target as HTMLInputElement).value.toLowerCase();
     this.presupuestosFiltrados = this.presupuestos.filter(p =>
-      p.pais.toLowerCase().includes(valor)
+      p.pais.toLowerCase().includes(valor) ||
+      p.ciudad.toLowerCase().includes(valor)
     );
     this.calcularTotal();
   }
 
   agregarPais() {
+    const ciudades = ['Bogotá', 'Medellín', 'Cali'];
+    const nuevaCiudad = ciudades[Math.floor(Math.random() * ciudades.length)];
+
     const nuevoPais: Presupuesto = {
       pais: 'Colombia',
+      ciudad: nuevaCiudad,
       bandera: 'https://flagcdn.com/w40/co.png',
       total: Math.floor(Math.random() * 1000) + 500
     };
+
     this.presupuestos = [...this.presupuestos, nuevoPais];
     this.presupuestosFiltrados = [...this.presupuestos];
     this.calcularTotal();
