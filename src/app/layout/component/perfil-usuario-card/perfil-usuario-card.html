@@ -1,0 +1,66 @@
+<p-card [style]="{ width: '23rem' }" styleClass="surface-card shadow-3 border-round-xl p-4">
+    <ng-template pTemplate="header">
+        <div class="flex align-items-center justify-content-center mb-3">
+            <i class="pi pi-user text-4xl text-primary"></i>
+        </div>
+    </ng-template>
+
+    <ng-template pTemplate="title">
+        <div class="text-center mb-3">
+            <h2 class="text-lg font-semibold text-color mb-1">
+                {{ datosPerfil.nombreUsuario }}
+            </h2>
+            <p class="text-sm text-secondary m-0">
+                {{ datosPerfil.correoUsuario }}
+            </p>
+        </div>
+    </ng-template>
+
+    <div class="info-grid">
+        <div class="info-item">
+            <span class="label">Estado:</span>
+            <span
+                class="value"
+                [ngClass]="{
+                    'text-green-600': datosPerfil.estadoActivo,
+                    'text-red-500': !datosPerfil.estadoActivo
+                }"
+            >
+                {{ datosPerfil.estadoActivo ? 'Activo' : 'Inactivo' }}
+            </span>
+        </div>
+
+        <div class="info-item">
+            <span class="label">Fecha de creación:</span>
+            <span class="value">{{ datosPerfil.fechaCreacion }}</span>
+        </div>
+
+        <div class="info-item">
+            <span class="label">Último ingreso:</span>
+            <span class="value">{{ datosPerfil.ultimoIngreso }}</span>
+        </div>
+
+        <div class="info-item">
+            <span class="label">Inicio del viaje:</span>
+            <span class="value">{{ datosPerfil.fechaInicioViaje }}</span>
+        </div>
+
+        <div class="info-item">
+            <span class="label">Presupuesto total:</span>
+            <span class="value text-primary font-semibold">
+                {{ datosPerfil.presupuestoTotal }}
+            </span>
+        </div>
+    </div>
+
+    <ng-template pTemplate="footer">
+        <div class="flex justify-content-center mt-4">
+            <button
+                pButton
+                label="Editar perfil"
+                icon="pi pi-pencil"
+                class="p-button-sm p-button-rounded p-button-outlined"
+            ></button>
+        </div>
+    </ng-template>
+</p-card>
