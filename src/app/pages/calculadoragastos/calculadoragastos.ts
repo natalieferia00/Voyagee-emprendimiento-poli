@@ -3,7 +3,7 @@ import { CommonModule, CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MessageService, ConfirmationService } from 'primeng/api';
 
-// PrimeNG Components
+/* PrimeNG Components */
 import { Table, TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -47,8 +47,10 @@ interface Gasto {
   ],
   providers: [MessageService, ConfirmationService],
   template: `
+
     <p-toast></p-toast>
-    <p-confirmDialog [style]="{width: '40vw'}" [baseZIndex]="10000" acceptLabel="Sí, eliminar" rejectLabel="No"></p-confirmDialog>
+    <p-confirmDialog [style]="{width: '40vw'}" [baseZIndex]="10000"
+        acceptLabel="Sí, eliminar" rejectLabel="No"></p-confirmDialog>
 
     <div class="p-5">
       <p-card header="Calculadora de Gastos de Viaje" styleClass="shadow-2xl">
@@ -56,74 +58,120 @@ interface Gasto {
           Administra tus gastos de viaje por país.
         </ng-template>
 
-        <div class="flex justify-content-between align-items-center mb-3 p-3 border-round surface-100 border-1 surface-border">
-          <div class="flex align-items-center gap-3">
-            <p-button label="Añadir Gasto" icon="pi pi-plus" (onClick)="showNewExpenseDialog()" styleClass="p-button-success"></p-button>
-          </div>
+        <!-- BARRA SUPERIOR ESTILO PRIME NG FILTERING -->
+        <div class="flex justify-content-between align-items-center mb-6">
 
-          <p-iconfield iconPosition="left">
-            <p-inputicon>
-              <i class="pi pi-search"></i>
-            </p-inputicon>
-            <input #filterInput pInputText type="text" placeholder="Buscar..." (input)="onGlobalFilter($event, dt)" />
-          </p-iconfield>
+          <!-- Clear Filtros -->
+          <p-button 
+            label="Clear" 
+            icon="pi pi-filter-slash" 
+            styleClass="p-button-outlined p-button-success"
+            (onClick)="dt.clear()"
+             class="mr-220">>
+          </p-button>
+
+          <!-- Search -->
+          <span class="p-input-icon-left">
+            <input 
+              pInputText
+              #filterInput
+              type="text"
+              placeholder="Search keyword"
+              (input)="onGlobalFilter($event, dt)"
+              class="w-15rem"
+            />
+          </span>
         </div>
 
+        <!-- TABLA PRINCIPAL -->
         <p-table #dt
           [value]="gastos"
           dataKey="id"
           [rows]="10"
           [paginator]="true"
-          [showGridlines]="true"
           [rowHover]="true"
           [globalFilterFields]="['pais', 'nombre', 'descripcion']"
           responsiveLayout="scroll"
-          styleClass="p-datatable-sm p-datatable-gridlines shadow-2">
+          styleClass="p-datatable-sm shadow-2">
 
+          <!-- HEADER -->
           <ng-template pTemplate="header">
             <tr>
-              <th pSortableColumn="pais" style="width:15%">País <p-sortIcon field="pais"></p-sortIcon></th>
-              <th pSortableColumn="nombre" style="width:20%">Nombre del Gasto <p-sortIcon field="nombre"></p-sortIcon></th>
-              <th style="width:35%">Descripción</th>
-              <th pSortableColumn="monto" style="width:15%">Monto <p-sortIcon field="monto"></p-sortIcon></th>
-              <th style="width:15%">Acciones</th>
+              <th pSortableColumn="pais">
+                País
+                <p-sortIcon field="pais"></p-sortIcon>
+                <p-columnFilter field="pais" type="text" display="menu"></p-columnFilter>
+              </th>
+
+              <th pSortableColumn="nombre">
+                Nombre del Gasto
+                <p-sortIcon field="nombre"></p-sortIcon>
+                <p-columnFilter field="nombre" type="text" display="menu"></p-columnFilter>
+              </th>
+
+              <th>
+                Descripción
+                <p-columnFilter field="descripcion" type="text" display="menu"></p-columnFilter>
+              </th>
+
+              <th pSortableColumn="monto">
+                Monto
+                <p-sortIcon field="monto"></p-sortIcon>
+                <p-columnFilter field="monto" type="numeric" display="menu"></p-columnFilter>
+              </th>
+
+              <th>Acciones</th>
             </tr>
           </ng-template>
 
+          <!-- BODY -->
           <ng-template pTemplate="body" let-gasto>
             <tr>
               <td><p-tag [value]="gasto.pais" severity="info"></p-tag></td>
               <td>{{ gasto.nombre }}</td>
               <td>{{ gasto.descripcion }}</td>
-              <td class="font-bold text-right">{{ gasto.monto | currency:'USD':'symbol':'1.2-2':'es-US' }}</td>
+              <td class="font-bold text-right">
+                {{ gasto.monto | currency:'USD':'symbol':'1.2-2':'es-US' }}
+              </td>
               <td class="text-center">
-                <p-button icon="pi pi-pencil" (onClick)="editarGasto(gasto)" styleClass="p-button-rounded p-button-warning p-button-text"></p-button>
-                <p-button icon="pi pi-trash" (onClick)="confirmarEliminarGasto(gasto)" styleClass="p-button-rounded p-button-danger p-button-text"></p-button>
+                <p-button icon="pi pi-pencil"
+                          (onClick)="editarGasto(gasto)"
+                          styleClass="p-button-rounded p-button-warning p-button-text"></p-button>
+                <p-button icon="pi pi-trash"
+                          (onClick)="confirmarEliminarGasto(gasto)"
+                          styleClass="p-button-rounded p-button-danger p-button-text"></p-button>
               </td>
             </tr>
           </ng-template>
 
+          <!-- EMPTY -->
           <ng-template pTemplate="emptymessage">
-            <tr><td colspan="5" class="text-center p-4 text-gray-500">No hay gastos registrados.</td></tr>
+            <tr>
+              <td colspan="5" class="text-center p-4 text-gray-500">
+                No hay gastos registrados.
+              </td>
+            </tr>
           </ng-template>
 
+          <!-- SUMMARY -->
           <ng-template pTemplate="summary">
             <div class="flex justify-content-end text-lg font-semibold">
               Total: {{ totalGastos | currency:'USD':'symbol':'1.2-2':'es-US' }}
             </div>
           </ng-template>
+
         </p-table>
       </p-card>
     </div>
 
-    <!-- Diálogo para crear/editar -->
+    <!-- DIALOG -->
     <p-dialog 
-      header="{{ editando ? 'Editar Gasto' : 'Añadir Gasto' }}" 
-      [(visible)]="displayDialog" 
-      [modal]="true" 
-      [style]="{width: '30vw'}" 
+      header="{{ editando ? 'Editar Gasto' : 'Añadir Gasto' }}"
+      [(visible)]="displayDialog"
+      [modal]="true"
+      [style]="{width: '30vw'}"
       [breakpoints]="{'960px': '75vw'}">
-      
+
       <div class="p-fluid">
         <div class="field">
           <label>País</label>
@@ -147,15 +195,18 @@ interface Gasto {
         <p-button label="Cancelar" icon="pi pi-times" (onClick)="displayDialog=false" styleClass="p-button-text"></p-button>
         <p-button label="Guardar" icon="pi pi-check" (onClick)="guardarGasto()"></p-button>
       </ng-template>
+
     </p-dialog>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CalculadoraGastosComponent implements OnInit {
+  
   private messageService = inject(MessageService);
   private confirmationService = inject(ConfirmationService);
 
   @ViewChild('filterInput') filterInput!: ElementRef;
+
   gastos: Gasto[] = [];
   nuevoGasto: Gasto = this.resetGasto();
   displayDialog = false;
@@ -171,7 +222,6 @@ export class CalculadoraGastosComponent implements OnInit {
     ];
     this.calcularTotal();
   }
-  
 
   onGlobalFilter(event: Event, table: Table) {
     table.filterGlobal((event.target as HTMLInputElement).value, 'contains');

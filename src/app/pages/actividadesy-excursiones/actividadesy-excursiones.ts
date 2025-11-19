@@ -55,7 +55,6 @@ interface Tour {
       <button pButton label="Limpiar Filtros" class="p-button-outlined" icon="pi pi-filter-slash" (click)="clear(dt)"></button>
       <div class="ml-auto">
         <span class="p-input-icon-left">
-          <i class="pi pi-search"></i>
           <input pInputText type="text" (input)="onGlobalFilter(dt, $event)" placeholder="Buscar tour o guía" />
         </span>
       </div>

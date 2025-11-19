@@ -28,7 +28,7 @@ import { ToolbarModule } from 'primeng/toolbar';
       <!-- Encabezado con Toolbar -->
       <p-toolbar styleClass="mb-4">
         <div class="p-toolbar-group-left">
-          <h2 class="font-semibold text-xl m-0">Lista de Viaje</h2>
+          <h2 class="font-semibold text-xl m-0">Checkout Equipaje</h2>
         </div>
         <div class="p-toolbar-group-right">
           <p-button
@@ -43,7 +43,6 @@ import { ToolbarModule } from 'primeng/toolbar';
      
     <!-- Tabla tipo árbol -->
     <div class="card mt-4">
-      <div class="font-semibold text-lg mb-3">TreeTable</div>
       <p-treetable 
         [value]="treeTableValue" 
         [columns]="cols"
@@ -91,8 +90,8 @@ import { ToolbarModule } from 'primeng/toolbar';
         </div>
 
         <div>
-          <label class="block mb-1 font-medium">Tipo</label>
-          <input pInputText type="text" [(ngModel)]="newNode.size" placeholder="Ej: tecnologia" />
+          <label class="block mb-1 font-medium">Peso/Medidas</label>
+          <input pInputText type="text" [(ngModel)]="newNode.size" placeholder="Ej: 20cm" />
         </div>
 
         <div>
@@ -132,9 +131,9 @@ export class ListaViajeComponent implements OnInit {
     this.nodeService.getTreeTableNodes().then((files: any) => (this.treeTableValue = files));
 
     this.cols = [
-      { field: 'name', header: 'Name' },
-      { field: 'size', header: 'Size' },
-      { field: 'type', header: 'Type' }
+      { field: 'name', header: 'Nombre' },
+      { field: 'size', header: 'Peso/medidas' },
+      { field: 'type', header: 'Descripción' }
     ];
 
     this.selectedTreeTableValue = {

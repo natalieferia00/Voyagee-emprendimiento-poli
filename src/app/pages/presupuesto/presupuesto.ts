@@ -38,17 +38,27 @@ export interface Presupuesto {
         Visualiza el presupuesto total por país y ciudad, incluyendo su bandera.
       </ng-template>
 
-      <!-- Buscador -->
-      <div class="flex justify-content-between align-items-center mb-3 p-3 border-round surface-100 border-1 surface-border">
-        <div class="flex align-items-center gap-3">
-          <p-button label="Añadir País" icon="pi pi-plus" (onClick)="agregarPais()" styleClass="p-button-success"></p-button>
-        </div>
+<div class="flex justify-content-start align-items-center mb-3 gap-3">
 
-        <p-iconfield iconPosition="left">
-          <p-inputicon><i class="pi pi-search"></i></p-inputicon>
-          <input pInputText type="text" placeholder="Buscar país o ciudad..." (input)="filtrar($event)" />
-        </p-iconfield>
-      </div>
+ <p-iconfield iconPosition="left">
+ <p-inputicon><i class="pi pi-search"></i></p-inputicon>
+ <input 
+ pInputText 
+ type="text" 
+ placeholder="Buscar país o ciudad..." 
+ (input)="filtrar($event)"
+ class="w-20rem no-border-input" 
+ />
+ </p-iconfield>
+
+<p-button 
+label="Añadir País" 
+ icon="pi pi-plus" 
+ (onClick)="agregarPais()" 
+ styleClass="p-button-success">
+ </p-button>
+
+</div>
 
       <!-- Tabla -->
       <p-table 
