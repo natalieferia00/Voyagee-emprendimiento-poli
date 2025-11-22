@@ -18,7 +18,7 @@ import { IconFieldModule } from 'primeng/iconfield';
 import { TagModule } from 'primeng/tag';
 import { ObjectUtils } from 'primeng/utils';
 
-// ✈️ Interfaz base para un vuelo
+
 interface Flight {
   id: number;
   flightNumber: string;
@@ -29,10 +29,10 @@ interface Flight {
   status: string;
   description: string;
   progress: number;
-  url: string; // ✅ Nuevo campo para la URL
+  url: string;
 }
 
-// ✅ Extendemos para incluir la fecha convertida
+
 interface FlightWithParsedDate extends Flight {
   parsedDate?: Date;
 }
@@ -107,42 +107,54 @@ interface FlightWithParsedDate extends Flight {
             <th>Estado</th>
             <th>Descripción</th>
             <th>Progreso</th>
-            <th>URL</th> <!-- ✅ Nueva columna -->
+            <th>URL</th> 
           </tr>
         </ng-template>
 
-        <ng-template #body let-flight>
-          <tr>
-            <td>{{ flight.flightNumber }}</td>
-            <td>{{ flight.origin }}</td>
-            <td>{{ flight.destination }}</td>
-            <td>{{ flight.parsedDate || flight.date | date: 'dd/MM/yyyy' }}</td>
-            <td>{{ flight.price | currency: 'USD' }}</td>
-            <td>
-              <p-tag
-                [value]="flight.status"
-                [severity]="getSeverity(flight.status)"
-              ></p-tag>
-            </td>
-            <td>{{ flight.description }}</td>
-            <td>
-              <p-progressbar
-                [value]="flight.progress"
-                [showValue]="false"
-                [style]="{ height: '0.5rem' }"
-              ></p-progressbar>
-            </td>
-            <td>
-              <a
-                *ngIf="flight.url"
-                [href]="flight.url"
-                target="_blank"
-                class="text-blue-500 underline"
-                >Ver vuelo</a
-              >
-            </td>
-          </tr>
-        </ng-template>
+<ng-template #body let-flight>
+  <tr>
+    <td>{{ flight.flightNumber }}</td>
+    <td>{{ flight.origin }}</td>
+    <td>{{ flight.destination }}</td>
+    <td>{{ flight.parsedDate || flight.date | date: 'dd/MM/yyyy' }}</td>
+    <td>{{ flight.price | currency: 'USD' }}</td>
+    <td>
+      <p-tag
+        [value]="flight.status"
+        [severity]="getSeverity(flight.status)"
+      ></p-tag>
+    </td>
+
+    <td>
+      <p-button
+        label="Ver"
+        icon="pi pi-eye"
+        [rounded]="true"
+        [text]="true"
+        severity="info"
+      ></p-button>
+    </td>
+
+    <td>
+      <p-progressbar
+        [value]="flight.progress"
+        [showValue]="false"
+        [style]="{ height: '0.5rem' }"
+      ></p-progressbar>
+    </td>
+
+    <td>
+      <a
+        *ngIf="flight.url"
+        [href]="flight.url"
+        target="_blank"
+        class="text-blue-500 underline"
+        >Ver vuelo</a
+      >
+    </td>
+  </tr>
+</ng-template>
+
 
         <ng-template #emptymessage>
           <tr><td colspan="9">No se encontraron vuelos.</td></tr>
@@ -172,7 +184,7 @@ export class Empty implements OnInit {
   @ViewChild('filter') filter!: ElementRef;
 
   ngOnInit() {
-    // ✈️ Datos de ejemplo
+
     const flightData: Flight[] = [
       {
         id: 1,
@@ -184,7 +196,7 @@ export class Empty implements OnInit {
         status: 'Reservado',
         description: 'Vuelo nacional con escala corta.',
         progress: 100,
-        url: 'https://www.avianca.com/co/es' // ✅ Ejemplo URL
+        url: 'https://www.avianca.com/co/es'
       },
       {
         id: 2,
@@ -212,7 +224,7 @@ export class Empty implements OnInit {
       }
     ];
 
-    // ✅ Convertimos fechas sin modificar tipo original
+
     this.flights = flightData.map(flight => ({
       ...flight,
       parsedDate: new Date(flight.date)

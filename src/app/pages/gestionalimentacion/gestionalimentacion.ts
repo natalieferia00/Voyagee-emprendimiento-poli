@@ -56,31 +56,39 @@ interface Restaurant {
                 </tr>
             </ng-template>
 
-            <ng-template pTemplate="body" let-restaurant>
-                <tr>
-                    <td>{{ restaurant.name }}</td>
+           <ng-template pTemplate="body" let-restaurant>
+    <tr>
+        <td>{{ restaurant.name }}</td>
 
-                    <td>
-                        <p-tag 
-                            [value]="restaurant.cuisine" 
-                            [severity]="getSeverity(restaurant.cuisine)">
-                        </p-tag>
-                    </td>
+        <td>
+            <p-tag 
+                [value]="restaurant.cuisine" 
+                [severity]="getSeverity(restaurant.cuisine)">
+            </p-tag>
+        </td>
 
-                    <td>
-                        <p-rating [ngModel]="restaurant.rating" [readonly]="true" [stars]="5"></p-rating>
-                    </td>
+        <td>
+            <p-rating [ngModel]="restaurant.rating" [readonly]="true" [stars]="5"></p-rating>
+        </td>
 
-                    <td>{{ restaurant.priceRange }}</td>
+        <td>{{ restaurant.priceRange }}</td>
 
-                    <td>{{ restaurant.description }}</td>
+        <td>
+            <p-button 
+                label="Ver" 
+                icon="pi pi-eye" 
+                [rounded]="true" 
+                [text]="true" 
+                severity="info">
+            </p-button>
+        </td>
 
-                    <td>
-                        <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="secondary" styleClass="mr-2"></p-button>
-                        <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger"></p-button>
-                    </td>
-                </tr>
-            </ng-template>
+        <td>
+            <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="secondary" styleClass="mr-2"></p-button>
+            <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger"></p-button>
+        </td>
+    </tr>
+</ng-template>
 
             <ng-template pTemplate="emptymessage">
                 <tr>

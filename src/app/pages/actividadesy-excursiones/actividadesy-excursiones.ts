@@ -13,7 +13,6 @@ import { SliderModule } from 'primeng/slider';
 import { ToggleButtonModule } from 'primeng/togglebutton';
 import { RippleModule } from 'primeng/ripple';
 import { DividerModule } from 'primeng/divider';
-import { ObjectUtils } from 'primeng/utils';
 
 interface Tour {
   id: number;
@@ -22,7 +21,7 @@ interface Tour {
   duracion: string;
   precio: number;
   estado: string;
-  guia: string;
+  descripcion: string;
   valoracion: number;
   actividad: number;
   bandera: string;
@@ -55,7 +54,7 @@ interface Tour {
       <button pButton label="Limpiar Filtros" class="p-button-outlined" icon="pi pi-filter-slash" (click)="clear(dt)"></button>
       <div class="ml-auto">
         <span class="p-input-icon-left">
-          <input pInputText type="text" (input)="onGlobalFilter(dt, $event)" placeholder="Buscar tour o guía" />
+          <input pInputText type="text" (input)="onGlobalFilter(dt, $event)" placeholder="Buscar tour" />
         </span>
       </div>
     </div>
@@ -67,14 +66,14 @@ interface Tour {
       [rows]="8"
       [showGridlines]="true"
       [rowHover]="true"
-      [globalFilterFields]="['nombre','pais','guia','estado']"
+      [globalFilterFields]="['nombre','pais','estado']"
       responsiveLayout="scroll"
     >
       <ng-template pTemplate="header">
         <tr>
           <th>Nombre</th>
           <th>País</th>
-          <th>Guía</th>
+          <th>Descripción</th>
           <th>Duración</th>
           <th>Precio</th>
           <th>Actividad</th>
@@ -86,21 +85,31 @@ interface Tour {
       <ng-template pTemplate="body" let-tour>
         <tr>
           <td>{{ tour.nombre }}</td>
+
           <td>
             <div class="flex items-center gap-2">
               <img [src]="tour.bandera" alt="bandera" width="28" />
               <span>{{ tour.pais }}</span>
             </div>
           </td>
-          <td>{{ tour.guia }}</td>
+
+       
+          <td>
+            <button pButton label="Ver" icon="pi pi-eye" class="p-button-sm" (click)="verDescripcion(tour)"></button>
+          </td>
+
           <td>{{ tour.duracion }}</td>
+
           <td>{{ tour.precio | currency:'COP' }}</td>
+
           <td>
             <p-progressbar [value]="tour.actividad" [showValue]="false" [style]="{ height: '0.5rem' }" />
           </td>
+
           <td>
             <p-rating [ngModel]="tour.valoracion" [readonly]="true"></p-rating>
           </td>
+
           <td>
             <p-tag [value]="tour.estado" [severity]="getSeverity(tour.estado)"></p-tag>
           </td>
@@ -128,7 +137,6 @@ export class ActividadesyExcursionesComponent implements OnInit {
   @ViewChild('filter') filter!: ElementRef;
 
   ngOnInit() {
-    // Simulación de datos de tours y actividades
     this.tours = [
       {
         id: 1,
@@ -137,7 +145,7 @@ export class ActividadesyExcursionesComponent implements OnInit {
         duracion: '3 días / 2 noches',
         precio: 1200000,
         estado: 'Activo',
-        guia: 'Laura Gómez',
+        descripcion: 'Recorrido por las murallas, castillo San Felipe y playa.',
         valoracion: 4,
         actividad: 90,
         bandera: 'https://flagcdn.com/w40/co.png'
@@ -149,7 +157,7 @@ export class ActividadesyExcursionesComponent implements OnInit {
         duracion: '2 días / 1 noche',
         precio: 850000,
         estado: 'Pendiente',
-        guia: 'Carlos Pérez',
+        descripcion: 'Visita a Salento, Valle del Cocora y finca cafetera.',
         valoracion: 5,
         actividad: 60,
         bandera: 'https://flagcdn.com/w40/co.png'
@@ -161,7 +169,7 @@ export class ActividadesyExcursionesComponent implements OnInit {
         duracion: '5 días / 4 noches',
         precio: 2400000,
         estado: 'Activo',
-        guia: 'María Ramos',
+        descripcion: 'Trekking y visita guiada a la ciudad sagrada.',
         valoracion: 5,
         actividad: 100,
         bandera: 'https://flagcdn.com/w40/pe.png'
@@ -173,12 +181,16 @@ export class ActividadesyExcursionesComponent implements OnInit {
         duracion: '7 días / 6 noches',
         precio: 6000000,
         estado: 'Cancelado',
-        guia: 'David Okoro',
+        descripcion: 'Safari fotográfico por la sabana africana.',
         valoracion: 3,
         actividad: 30,
         bandera: 'https://flagcdn.com/w40/ke.png'
       }
     ];
+  }
+
+  verDescripcion(tour: Tour) {
+    alert('Descripción:\n\n' + tour.descripcion);
   }
 
   onGlobalFilter(table: Table, event: Event) {

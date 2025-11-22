@@ -55,7 +55,7 @@ interface ExportColumn {
         ConfirmDialogModule
     ],
     template: `
-        <p-toolbar styleClass="mb-6">
+       <p-toolbar styleClass="mb-6">
             <ng-template #start>
                 <p-button label="New" icon="pi pi-plus" severity="secondary" class="mr-2" (onClick)="openNew()" />
                 <p-button severity="secondary" label="Delete" icon="pi pi-trash" outlined (onClick)="deleteSelectedProducts()" [disabled]="!selectedProducts || !selectedProducts.length" />
@@ -72,7 +72,7 @@ interface ExportColumn {
             [rows]="10"
             [columns]="cols"
             [paginator]="true"
-            [globalFilterFields]="['name', 'country.name', 'representative.name', 'status']"
+            [globalFilterFields]="['name', 'URL', 'tipoAlojamiento', 'inventoryStatus']"
             [tableStyle]="{ 'min-width': '75rem' }"
             [(selection)]="selectedProducts"
             [rowHover]="true"
@@ -90,122 +90,110 @@ interface ExportColumn {
                     </p-iconfield>
                 </div>
             </ng-template>
+
             <ng-template #header>
                 <tr>
                     <th style="width: 3rem">
                         <p-tableHeaderCheckbox />
                     </th>
-                    <th style="min-width: 16rem">Codigo</th>
-                    <th pSortableColumn="nombre" style="min-width:16rem">
-                        Nombre
-                        <p-sortIcon field="nombre" />
-                    </th>
-                    <th>Imagen</th>
-                    <th pSortableColumn="precio" style="min-width: 8rem">
-                        Precio
-                        <p-sortIcon field="precio" />
-                    </th>
-                    <th pSortableColumn="tipoAlojamiento" style="min-width:10rem">
-                        tipoAlojamiento
-                        <p-sortIcon field="tipoAlojamiento" />
-                    </th>
-                    <th pSortableColumn="Estrellas" style="min-width: 12rem">
-                        Estrellas
-                        <p-sortIcon field="Estrellas" />
-                    </th>
-                    <th pSortableColumn="Estado" style="min-width: 12rem">
-                        Estado
-                        <p-sortIcon field="Estado" />
-                    </th>
-                    <th style="min-width: 12rem"></th>
+                    <th>Codigo</th>
+                    <th>Nombre</th>
+                    <th>Descripción</th>
+                    <th>Precio</th>
+                    <th>URL</th>
+                    <th>Tipo Alojamiento</th>
+                    <th>Estrellas</th>
+                    <th>Estado</th>
+                    <th></th>
                 </tr>
             </ng-template>
+
             <ng-template #body let-product>
                 <tr>
                     <td style="width: 3rem">
                         <p-tableCheckbox [value]="product" />
                     </td>
-                    <td style="min-width: 12rem">{{ product.code }}</td>
-                    <td style="min-width: 16rem">{{ product.name }}</td>
+
+                    <td>{{ product.code }}</td>
+                    <td>{{ product.name }}</td>
+
                     <td>
-                        <img [src]="'https://primefaces.org/cdn/primeng/images/demo/product/' + product.image" [alt]="product.name" style="width: 64px" class="rounded" />
+                        <p-button label="Ver" size="small" (onClick)="verDescripcion(product)" />
                     </td>
+
                     <td>{{ product.price | currency: 'USD' }}</td>
-                    <td>{{ product.category }}</td>
+
+                    <td>
+                        <a [href]="product.URL" target="_blank" class="text-primary hover:underline">
+                            {{ product.URL }}
+                        </a>
+                    </td>
+
+                    <td>{{ product.tipoAlojamiento }}</td>
+
                     <td>
                         <p-rating [(ngModel)]="product.rating" [readonly]="true" />
                     </td>
+
                     <td>
                         <p-tag [value]="product.inventoryStatus" [severity]="getSeverity(product.inventoryStatus)" />
                     </td>
+
                     <td>
                         <p-button icon="pi pi-pencil" class="mr-2" [rounded]="true" [outlined]="true" (click)="editProduct(product)" />
                         <p-button icon="pi pi-trash" severity="danger" [rounded]="true" [outlined]="true" (click)="deleteProduct(product)" />
                     </td>
                 </tr>
             </ng-template>
+
+            <ng-template #emptymessage>
+                <tr>
+                    <td colspan="10">No se encontraron alojamientos.</td>
+                </tr>
+            </ng-template>
         </p-table>
 
+        <!-- DIALOGO ALOJAMIENTO -->
         <p-dialog [(visible)]="productDialog" [style]="{ width: '450px' }" header="Detalles del alojamiento" [modal]="true">
             <ng-template #content>
-                <div class="flex flex-col gap-6">
-                    <img [src]="'https://primefaces.org/cdn/primeng/images/demo/product/' + product.image" [alt]="product.image" class="block m-auto pb-4" *ngIf="product.image" />
+                <div class="flex flex-col gap-4">
+
                     <div>
-                        <label for="name" class="block font-bold mb-3"> Nombre</label>
-                        <input type="text" pInputText id="name" [(ngModel)]="product.name" required autofocus fluid />
-                        <small class="text-red-500" *ngIf="submitted && !product.name">El nombre del alojamiento es requerido.</small>
-                    </div>
-                    <div>
-                        <label for="description" class="block font-bold mb-3">Descripción</label>
-                        <textarea id="description" pTextarea [(ngModel)]="product.description" required rows="3" cols="20" fluid></textarea>
+                        <label class="block font-bold mb-2">Nombre</label>
+                        <input type="text" pInputText [(ngModel)]="product.name" required autofocus fluid />
                     </div>
 
                     <div>
-                        <label for="inventoryStatus" class="block font-bold mb-3">Estado del alojamiento</label>
-                        <p-select [(ngModel)]="product.inventoryStatus" inputId="inventoryStatus" [options]="statuses" optionLabel="label" optionValue="label" placeholder="Select a Status" fluid />
+                        <label class="block font-bold mb-2">Descripción</label>
+                        <textarea pTextarea [(ngModel)]="product.description" rows="3" fluid></textarea>
                     </div>
 
                     <div>
-                        <span class="block font-bold mb-4">Tipo de alojamiento</span>
-                        <div class="grid grid-cols-12 gap-4">
-                            <div class="flex items-center gap-2 col-span-6">
-                                <p-radiobutton id="category1" name="category" value="Hotel" [(ngModel)]="product.category" />
-                                <label for="category1">Hotel</label>
-                            </div>
-                            <div class="flex items-center gap-2 col-span-6">
-                                <p-radiobutton id="category2" name="category" value="resort" [(ngModel)]="product.category" />
-                                <label for="category2">Resort</label>
-                            </div>
-                            <div class="flex items-center gap-2 col-span-6">
-                                <p-radiobutton id="category3" name="category" value="Motel" [(ngModel)]="product.category" />
-                                <label for="category3">Motel</label>
-                            </div>
-                            <div class="flex items-center gap-2 col-span-6">
-                                <p-radiobutton id="category4" name="category" value="Villa" [(ngModel)]="product.category" />
-                                <label for="category4">Villa</label>
-                            </div>
-                             <div class="flex items-center gap-2 col-span-6">
-                                <p-radiobutton id="category4" name="category" value="Casa" [(ngModel)]="product.category" />
-                                <label for="category4">Casa</label>
-                                 <div class="flex items-center gap-2 col-span-6">
-                                <p-radiobutton id="category4" name="category" value="Otro" [(ngModel)]="product.category" />
-                                <label for="category4">Otro</label>
-                                
-                            </div>
-                            </div>
-                        </div>
+                        <label class="block font-bold mb-2">Estado</label>
+                        <p-select [(ngModel)]="product.inventoryStatus" [options]="statuses" optionLabel="label" optionValue="label" placeholder="Seleccionar" fluid />
+                    </div>
+
+                    <div>
+                        <label class="block font-bold mb-2">Tipo alojamiento</label>
+                        <p-select [(ngModel)]="product.tipoAlojamiento" [options]="[
+                                {label:'Hotel', value:'Hotel'},
+                                {label:'Resort', value:'Resort'},
+                                {label:'Casa', value:'Casa'}
+                        ]" placeholder="Elegir..." fluid></p-select>
                     </div>
 
                     <div class="grid grid-cols-12 gap-4">
                         <div class="col-span-6">
-                            <label for="price" class="block font-bold mb-3">Precio</label>
-                            <p-inputnumber id="price" [(ngModel)]="product.price" mode="currency" currency="USD" locale="en-US" fluid />
+                            <label class="block font-bold mb-2">Precio</label>
+                            <p-inputnumber [(ngModel)]="product.price" mode="currency" currency="USD" locale="en-US" fluid />
                         </div>
+
                         <div class="col-span-6">
-                            <label for="quantity" class="block font-bold mb-3">Estrellas</label>
-                            <p-inputnumber id="quantity" [(ngModel)]="product.quantity" fluid />
+                            <label class="block font-bold mb-2">Estrellas</label>
+                            <p-inputnumber [(ngModel)]="product.rating" [max]="5" fluid />
                         </div>
                     </div>
+
                 </div>
             </ng-template>
 
@@ -215,38 +203,35 @@ interface ExportColumn {
             </ng-template>
         </p-dialog>
 
-        <p-confirmdialog [style]="{ width: '450px' }" />
+        <p-confirmdialog />
     `,
     providers: [MessageService, ProductService, ConfirmationService]
 })
 export class Crud implements OnInit {
+    
     productDialog: boolean = false;
-
     products = signal<Product[]>([]);
-
     product!: Product;
-
     selectedProducts!: Product[] | null;
-
     submitted: boolean = false;
 
-    statuses!: any[];
-
-    @ViewChild('dt') dt!: Table;
-
-    exportColumns!: ExportColumn[];
+    statuses = [
+        { label: 'Visto' },
+        { label: 'Reservado' },
+        { label: 'Descartado' },
+        { label: 'En proceso' }
+    ];
 
     cols!: Column[];
+    exportColumns!: ExportColumn[];
+
+    @ViewChild('dt') dt!: Table;
 
     constructor(
         private productService: ProductService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService
     ) {}
-
-    exportCSV() {
-        this.dt.exportCSV();
-    }
 
     ngOnInit() {
         this.loadDemoData();
@@ -257,22 +242,22 @@ export class Crud implements OnInit {
             this.products.set(data);
         });
 
-        this.statuses = [
-            { label: 'Visto', value: 'Visto' },
-            { label: 'Reservado', value: 'Reservado' },
-            { label: 'Descartado', value: 'Descartado' },
-            { label: 'En proceso', value: 'En proceso' }
-        ];
-
         this.cols = [
-            { field: 'codigo', header: 'Codigo', customExportHeader: 'Codigo del alojamiento' },
-            { field: 'nombre', header: 'nombre' },
-            { field: 'imagen', header: 'Imagen' },
-            { field: 'precio', header: 'Precio' },
-            { field: 'tipoAlojamiento', header: 'tipoAlojamiento' }
+            { field: 'code', header: 'Código' },
+            { field: 'name', header: 'Nombre' },
+            { field: 'description', header: 'Descripción' },
+            { field: 'URL', header: 'URL' }
         ];
 
         this.exportColumns = this.cols.map((col) => ({ title: col.header, dataKey: col.field }));
+    }
+
+    verDescripcion(item: Product) {
+        alert('Descripción:\n\n' + item.description);
+    }
+
+    exportCSV() {
+        this.dt.exportCSV();
     }
 
     onGlobalFilter(table: Table, event: Event) {
@@ -281,7 +266,6 @@ export class Crud implements OnInit {
 
     openNew() {
         this.product = {};
-        this.submitted = false;
         this.productDialog = true;
     }
 
@@ -290,66 +274,68 @@ export class Crud implements OnInit {
         this.productDialog = true;
     }
 
-    deleteSelectedProducts() {
-        this.confirmationService.confirm({
-            message: 'Estas seguro que quieres eliminar este alojamiento?',
-            header: 'Confirmar',
-            icon: 'pi pi-exclamation-triangle',
-            accept: () => {
-                this.products.set(this.products().filter((val) => !this.selectedProducts?.includes(val)));
-                this.selectedProducts = null;
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Successful',
-                    detail: 'Alojamiento Eliminado',
-                    life: 3000
-                });
-            }
-        });
-    }
-
     hideDialog() {
         this.productDialog = false;
         this.submitted = false;
     }
 
-    deleteProduct(product: Product) {
+    deleteSelectedProducts() {
         this.confirmationService.confirm({
-            message: 'Are you sure you want to delete ' + product.name + '?',
-            header: 'Confirm',
+            message: '¿Deseas eliminar estos alojamientos?',
+            header: 'Confirmar',
             icon: 'pi pi-exclamation-triangle',
             accept: () => {
-                this.products.set(this.products().filter((val) => val.id !== product.id));
-                this.product = {};
+                this.products.set(this.products().filter((p) => !this.selectedProducts?.includes(p)));
+                this.selectedProducts = null;
                 this.messageService.add({
                     severity: 'success',
-                    summary: 'Successful',
-                    detail: 'Product Deleted',
-                    life: 3000
+                    summary: 'Eliminados',
+                    detail: 'Alojamientos eliminados'
                 });
             }
         });
     }
 
-    findIndexById(id: string): number {
-        let index = -1;
-        for (let i = 0; i < this.products().length; i++) {
-            if (this.products()[i].id === id) {
-                index = i;
-                break;
+    deleteProduct(product: Product) {
+        this.confirmationService.confirm({
+            message: '¿Eliminar ' + product.name + '?',
+            header: 'Confirmar',
+            icon: 'pi pi-exclamation-triangle',
+            accept: () => {
+                this.products.set(this.products().filter((p) => p.id !== product.id));
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Eliminado',
+                    detail: 'Alojamiento eliminado'
+                });
             }
-        }
-
-        return index;
+        });
     }
 
-    createId(): string {
-        let id = '';
-        var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        for (var i = 0; i < 5; i++) {
-            id += chars.charAt(Math.floor(Math.random() * chars.length));
+    saveProduct() {
+        this.submitted = true;
+
+        let _products = [...this.products()];
+
+        if (this.product.name?.trim()) {
+            if (this.product.id) {
+                const index = _products.findIndex((p) => p.id === this.product.id);
+                _products[index] = this.product;
+            } else {
+                this.product.id = Math.random().toString(36).substring(2);
+                _products.push(this.product);
+            }
+
+            this.products.set(_products);
+            this.productDialog = false;
+            this.product = {};
+
+            this.messageService.add({
+                severity: 'success',
+                summary: 'Guardado',
+                detail: 'Alojamiento actualizado/creado'
+            });
         }
-        return id;
     }
 
     getSeverity(status: string) {
@@ -362,36 +348,6 @@ export class Crud implements OnInit {
                 return 'danger';
             default:
                 return 'info';
-        }
-    }
-
-    saveProduct() {
-        this.submitted = true;
-        let _products = this.products();
-        if (this.product.name?.trim()) {
-            if (this.product.id) {
-                _products[this.findIndexById(this.product.id)] = this.product;
-                this.products.set([..._products]);
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Successful',
-                    detail: 'Product Updated',
-                    life: 3000
-                });
-            } else {
-                this.product.id = this.createId();
-                this.product.image = 'product-placeholder.svg';
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Successful',
-                    detail: 'Product Created',
-                    life: 3000
-                });
-                this.products.set([..._products, this.product]);
-            }
-
-            this.productDialog = false;
-            this.product = {};
         }
     }
 }

@@ -28,6 +28,7 @@ interface Viaje {
   costo: number;
   urlSeguimiento: string; // URL o ID de seguimiento
   prioridad: number; // Valor de 0 a 100 para la barra de progreso
+  descripcion: string;
 }
 
 @Component({
@@ -64,6 +65,7 @@ export class Gestiondetransporte implements OnInit {
 
   @ViewChild('filter') filter!: ElementRef;
   @ViewChild('dt1') dt1!: Table;
+viaje: any;
 
   constructor(private messageService: MessageService) {}
 
@@ -99,7 +101,8 @@ export class Gestiondetransporte implements OnInit {
         estado: 'pendiente',
         costo: 1500.50,
         urlSeguimiento: 'https://rastreo.com/trk1001',
-        prioridad: 85
+        prioridad: 85,
+        descripcion: 'Vuelo economico.'
       },
       {
         id: 1002,
@@ -110,7 +113,8 @@ export class Gestiondetransporte implements OnInit {
         estado: 'entregado',
         costo: 3200.00,
         urlSeguimiento: 'https://rastreo.com/trk1002',
-        prioridad: 92
+        prioridad: 92,
+         descripcion: 'pasaje.'
       },
       {
         id: 1003,
@@ -121,7 +125,8 @@ export class Gestiondetransporte implements OnInit {
         estado: 'en curso',
         costo: 450.75,
         urlSeguimiento: 'https://rastreo.com/trk1003',
-        prioridad: 70
+        prioridad: 70,
+        descripcion: 'pasaje.'
       },
       {
         id: 1004,
@@ -132,7 +137,8 @@ export class Gestiondetransporte implements OnInit {
         estado: 'cancelado',
         costo: 120.00,
         urlSeguimiento: 'https://rastreo.com/trk1004',
-        prioridad: 50
+        prioridad: 50,
+        descripcion: 'pasaje.'
       },
       {
         id: 1005,
@@ -143,7 +149,8 @@ export class Gestiondetransporte implements OnInit {
         estado: 'pendiente',
         costo: 890.99,
         urlSeguimiento: 'https://rastreo.com/trk1005',
-        prioridad: 98
+        prioridad: 98,
+        descripcion: 'pasaje.'
       }
     ];
   }
@@ -161,6 +168,11 @@ export class Gestiondetransporte implements OnInit {
     }
   }
 
+  verDescripcion(descripcion: string) {
+  alert("Descripción del viaje:\n\n" + descripcion);
+}
+
+
   getSeverity(estado: Viaje['estado']): 'success' | 'warn' | 'danger' | 'info' {
   switch (estado) {
     case 'entregado':
@@ -174,6 +186,12 @@ export class Gestiondetransporte implements OnInit {
       return 'info';
   }
 }
+getButtonColor(prioridad: number): "success" | "warning" | "danger" {
+  if (prioridad >= 85) return "success";
+  if (prioridad >= 60) return "warning";
+  return "danger";
+}
+
 
   // Formatea el costo a moneda (ejemplo con COP)
   formatCurrency(value: number) {
