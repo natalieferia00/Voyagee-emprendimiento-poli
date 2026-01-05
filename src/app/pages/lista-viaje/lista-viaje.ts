@@ -28,7 +28,7 @@ import { ToolbarModule } from 'primeng/toolbar';
       <!-- Encabezado con Toolbar -->
       <p-toolbar styleClass="mb-4">
         <div class="p-toolbar-group-left">
-          <h2 class="font-semibold text-xl m-0">Checkout Equipaje</h2>
+          <h2 class="font-semibold text-xl m-0">Checklist Equipaje</h2>
         </div>
         <div class="p-toolbar-group-right">
           <p-button
@@ -77,7 +77,7 @@ import { ToolbarModule } from 'primeng/toolbar';
 
     <!-- Diálogo para agregar nuevo nodo -->
     <p-dialog
-      header="Agregar nuevo Objeto"
+      header="Agregar nuevo Articulo"
       [(visible)]="displayForm"
       [modal]="true"
       [closable]="true"
@@ -85,17 +85,17 @@ import { ToolbarModule } from 'primeng/toolbar';
     >
       <div class="flex flex-col gap-3">
         <div>
-          <label class="block mb-1 font-medium">Objeto</label>
+          <label class="block mb-1 font-medium">Articulo</label>
           <input pInputText type="text" [(ngModel)]="newNode.name" placeholder="Ej: camara" />
         </div>
 
         <div>
-          <label class="block mb-1 font-medium">Peso/Medidas</label>
+          <label class="block mb-1 font-medium">Cantidad</label>
           <input pInputText type="text" [(ngModel)]="newNode.size" placeholder="Ej: 20cm" />
         </div>
 
         <div>
-          <label class="block mb-1 font-medium">Descripción</label>
+          <label class="block mb-1 font-medium">Nota</label>
           <input pInputText type="text" [(ngModel)]="newNode.type" placeholder="Ej: camara digital" />
         </div>
 
@@ -131,9 +131,9 @@ export class ListaViajeComponent implements OnInit {
     this.nodeService.getTreeTableNodes().then((files: any) => (this.treeTableValue = files));
 
     this.cols = [
-      { field: 'name', header: 'Nombre' },
-      { field: 'size', header: 'Peso/medidas' },
-      { field: 'type', header: 'Descripción' }
+      { field: 'name', header: 'Articulo' },
+      { field: 'size', header: 'Cantidad' },
+      { field: 'type', header: 'Nota' }
     ];
 
     this.selectedTreeTableValue = {
