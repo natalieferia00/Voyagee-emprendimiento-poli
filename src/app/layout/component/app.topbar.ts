@@ -2,7 +2,10 @@ import { Component } from '@angular/core';
 import { MenuItem } from 'primeng/api';
 import { RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { StyleClassModule } from 'primeng/styleclass';
+import { DatePickerModule } from 'primeng/datepicker';
+import { InputNumberModule } from 'primeng/inputnumber'; // Opcional para los inputs de moneda
 import { AppConfigurator } from './app.configurator';
 import { LayoutService } from '../service/layout.service';
 import { PerfilUsuarioCardComponent } from '../component/perfil-usuario-card/perfil-usuario-card';
@@ -13,7 +16,10 @@ import { PerfilUsuarioCardComponent } from '../component/perfil-usuario-card/per
     imports: [
         RouterModule,
         CommonModule,
+        FormsModule,
         StyleClassModule,
+        DatePickerModule,
+        InputNumberModule,
         AppConfigurator,
         PerfilUsuarioCardComponent 
     ],
@@ -38,65 +44,53 @@ import { PerfilUsuarioCardComponent } from '../component/perfil-usuario-card/per
 
         <div class="layout-topbar-actions">
             <div class="layout-config-menu">
-                <button
-                    type="button"
-                    class="layout-topbar-action"
-                    (click)="toggleDarkMode()"
-                >
-                    <i
-                        [ngClass]="{
-                            'pi': true,
-                            'pi-moon': layoutService.isDarkTheme(),
-                            'pi-sun': !layoutService.isDarkTheme()
-                        }"
-                    ></i>
+                <button type="button" class="layout-topbar-action" (click)="toggleDarkMode()">
+                    <i [ngClass]="{'pi': true, 'pi-moon': layoutService.isDarkTheme(), 'pi-sun': !layoutService.isDarkTheme()}"></i>
                 </button>
 
                 <div class="relative">
-                    <button
-                        class="layout-topbar-action layout-topbar-action-highlight"
-                        pStyleClass="@next"
-                        enterFromClass="hidden"
-                        enterActiveClass="animate-scalein"
-                        leaveToClass="hidden"
-                        leaveActiveClass="animate-fadeout"
-                        [hideOnOutsideClick]="true"
-                    >
+                    <button class="layout-topbar-action layout-topbar-action-highlight" pStyleClass="@next" enterFromClass="hidden" enterActiveClass="animate-scalein" leaveToClass="hidden" leaveActiveClass="animate-fadeout" [hideOnOutsideClick]="true">
                         <i class="pi pi-palette"></i>
                     </button>
                     <app-configurator />
                 </div>
             </div>
 
-            <button
-                class="layout-topbar-menu-button layout-topbar-action"
-                pStyleClass="@next"
-                enterFromClass="hidden"
-                enterActiveClass="animate-scalein"
-                leaveToClass="hidden"
-                leaveActiveClass="animate-fadeout"
-                [hideOnOutsideClick]="true"
-            >
-                <i class="pi pi-ellipsis-v"></i>
-            </button>
-
             <div class="layout-topbar-menu hidden lg:block">
                 <div class="layout-topbar-menu-content">
-                    <button type="button" class="layout-topbar-action">
-                        <i class="pi pi-calendar"></i>
-                        <span>Calendar</span>
-                    </button>
-                    <button type="button" class="layout-topbar-action">
-                        <i class="pi pi-inbox"></i>
-                        <span>Messages</span>
-                    </button>
                     
+                    <div class="relative inline-block">
+                        <button type="button" class="layout-topbar-action" (click)="toggleCalendar()">
+                            <i class="pi pi-calendar"></i>
+                            <span>Calendar</span>
+                        </button>
+                        <div *ngIf="mostrarCalendario" class="absolute right-0 mt-2 z-50 animate-fadein shadow-4 border-round overflow-hidden">
+                            <p-datepicker [(ngModel)]="fechaSeleccionada" [inline]="true" [showOtherMonths]="false"></p-datepicker>
+                        </div>
+                    </div>
 
-                    <button
-                        type="button"
-                        class="layout-topbar-action"
-                        (click)="togglePerfilCard()"
-                    >
+                    <div class="relative inline-block">
+                        <button type="button" class="layout-topbar-action" (click)="toggleConversor()">
+                            <i class="pi pi-money-bill"></i>
+                            <span>Currency</span>
+                        </button>
+                        
+                        <div *ngIf="mostrarConversor" class="absolute right-0 mt-2 z-50 animate-fadein shadow-4 border-round p-3 surface-card" style="min-width: 220px;">
+                            <div class="flex flex-column gap-2">
+                                <span class="font-bold text-sm mb-2">Conversor (Estatico)</span>
+                                <div class="flex align-items-center justify-content-between p-2 border-1 border-round surface-100">
+                                    <span class="text-xs font-medium">100.000 COP</span>
+                                    <i class="pi pi-arrow-right text-xs mx-2"></i>
+                                    <span class="text-xs font-bold text-primary">25.32 USD</span>
+                                </div>
+                                <div class="text-center mt-2">
+                                    <small class="text-color-secondary">Tasa: 1 USD ≈ 3.950 COP</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" class="layout-topbar-action" (click)="togglePerfilCard()">
                         <i class="pi pi-user"></i>
                         <span>Profile</span>
                     </button>
@@ -105,36 +99,51 @@ import { PerfilUsuarioCardComponent } from '../component/perfil-usuario-card/per
         </div>
     </div>
 
-    <!-- ✅ Tarjeta del perfil -->
     <div *ngIf="mostrarPerfilCard" class="fixed top-20 right-4 z-50 animate-fadein">
         <app-perfil-usuario-card></app-perfil-usuario-card>
     </div>
     `,
     styles: [`
-        .animate-fadein {
-            animation: fadeIn 0.3s ease-in-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        .animate-fadein { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        :host ::ng-deep .p-datepicker-inline { border: none; background: var(--surface-card); }
     `]
 })
 export class AppTopbar {
-    items!: MenuItem[];
-    mostrarPerfilCard = false; // ✅ Estado del perfil visible o no
+    mostrarPerfilCard = false;
+    mostrarCalendario = false;
+    mostrarConversor = false; 
+    
+    fechaSeleccionada: Date = new Date();
 
     constructor(public layoutService: LayoutService) {}
 
     toggleDarkMode() {
-        this.layoutService.layoutConfig.update((state) => ({
-            ...state,
-            darkTheme: !state.darkTheme
-        }));
+        this.layoutService.layoutConfig.update((state) => ({ ...state, darkTheme: !state.darkTheme }));
     }
 
-    // ✅ Alternar la visibilidad del perfil
     togglePerfilCard() {
         this.mostrarPerfilCard = !this.mostrarPerfilCard;
+        if (this.mostrarPerfilCard) {
+            this.mostrarCalendario = false;
+            this.mostrarConversor = false;
+        }
+    }
+
+    toggleCalendar() {
+        this.mostrarCalendario = !this.mostrarCalendario;
+        if (this.mostrarCalendario) {
+            this.mostrarPerfilCard = false;
+            this.mostrarConversor = false;
+        }
+    }
+
+  
+    toggleConversor() {
+        this.mostrarConversor = !this.mostrarConversor;
+        if (this.mostrarConversor) {
+            this.mostrarPerfilCard = false;
+            this.mostrarCalendario = false;
+        }
     }
 }

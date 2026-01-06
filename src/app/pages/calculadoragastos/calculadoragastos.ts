@@ -98,13 +98,13 @@ interface Gasto {
           <ng-template pTemplate="header">
             <tr>
               <th pSortableColumn="pais">
-                País
+                Destino
                 <p-sortIcon field="pais"></p-sortIcon>
                 <p-columnFilter field="pais" type="text" display="menu"></p-columnFilter>
               </th>
 
               <th pSortableColumn="nombre">
-                Nombre del Gasto
+                Costo
                 <p-sortIcon field="nombre"></p-sortIcon>
                 <p-columnFilter field="nombre" type="text" display="menu"></p-columnFilter>
               </th>
@@ -148,7 +148,7 @@ interface Gasto {
           <ng-template pTemplate="emptymessage">
             <tr>
               <td colspan="5" class="text-center p-4 text-gray-500">
-                No hay gastos registrados.
+                No hay Costos registrados.
               </td>
             </tr>
           </ng-template>
@@ -174,11 +174,11 @@ interface Gasto {
 
       <div class="p-fluid">
         <div class="field">
-          <label>País</label>
+          <label>Destino</label>
           <input pInputText [(ngModel)]="nuevoGasto.pais" placeholder="Ej: Perú" required />
         </div>
         <div class="field">
-          <label>Nombre del gasto</label>
+          <label>Costo</label>
           <input pInputText [(ngModel)]="nuevoGasto.nombre" placeholder="Ej: Hotel Miramar" required />
         </div>
         <div class="field">
