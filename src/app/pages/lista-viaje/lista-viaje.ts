@@ -9,6 +9,7 @@ import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { ToolbarModule } from 'primeng/toolbar';
+import { TooltipModule } from 'primeng/tooltip'; // Opcional para iconos
 
 @Component({
   selector: 'app-lista-viaje',
@@ -21,11 +22,11 @@ import { ToolbarModule } from 'primeng/toolbar';
     ButtonModule,
     DialogModule,
     InputTextModule,
-    ToolbarModule
+    ToolbarModule,
+    TooltipModule
   ],
   template: `
     <div class="card">
-      <!-- Encabezado con Toolbar -->
       <p-toolbar styleClass="mb-4">
         <div class="p-toolbar-group-left">
           <h2 class="font-semibold text-xl m-0">Checklist Equipaje</h2>
@@ -40,94 +41,88 @@ import { ToolbarModule } from 'primeng/toolbar';
         </div>
       </p-toolbar>
 
-     
-    <!-- Tabla tipo árbol -->
-    <div class="card mt-4">
-      <p-treetable 
-        [value]="treeTableValue" 
-        [columns]="cols"
-        selectionMode="checkbox" 
-        [(selectionKeys)]="selectedTreeTableValue"
-        dataKey="key"
-        [scrollable]="true" 
-        [tableStyle]="{ 'min-width': '50rem' }">
+      <div class="card mt-4">
+        <p-treetable 
+          [value]="treeTableValue" 
+          [columns]="cols"
+          selectionMode="checkbox" 
+          [(selectionKeys)]="selectedTreeTableValue"
+          dataKey="key"
+          [scrollable]="true" 
+          [tableStyle]="{ 'min-width': '50rem' }">
 
-        <ng-template #header let-columns>
-          <tr>
-            <th *ngFor="let col of columns">
-              {{ col.header }}
-            </th>
-          </tr>
-        </ng-template>
+          <ng-template #header let-columns>
+            <tr>
+              <th *ngFor="let col of columns">
+                {{ col.header }}
+              </th>
+              <th style="width: 10rem">Acciones</th>
+            </tr>
+          </ng-template>
 
-        <ng-template #body let-rowNode let-rowData="rowData" let-columns="columns">
-          <tr [ttRow]="rowNode" [ttSelectableRow]="rowNode">
-            <td *ngFor="let col of columns; let i = index">
-              <span class="flex items-center gap-2">
-                <p-treeTableToggler [rowNode]="rowNode" *ngIf="i === 0"></p-treeTableToggler>
-                <p-treeTableCheckbox [value]="rowNode" *ngIf="i === 0"></p-treeTableCheckbox>
-                {{ rowData[col.field] }}
-              </span>
-            </td>
-          </tr>
-        </ng-template>
-
-      </p-treetable>
-    </div>
-
-    <!-- Diálogo para agregar nuevo nodo -->
-    <p-dialog
-      header="Agregar nuevo Articulo"
-      [(visible)]="displayForm"
-      [modal]="true"
-      [closable]="true"
-      [style]="{ width: '15rem' }"
-    >
-      <div class="flex flex-col gap-3">
-        <div>
-          <label class="block mb-1 font-medium">Articulo</label>
-          <input pInputText type="text" [(ngModel)]="newNode.name" placeholder="Ej: camara" />
-        </div>
-
-        <div>
-          <label class="block mb-1 font-medium">Cantidad</label>
-          <input pInputText type="text" [(ngModel)]="newNode.size" placeholder="Ej: 20cm" />
-        </div>
-
-        <div>
-          <label class="block mb-1 font-medium">Nota</label>
-          <input pInputText type="text" [(ngModel)]="newNode.type" placeholder="Ej: camara digital" />
-        </div>
-
-        <div class="flex justify-end gap-2 mt-3">
-          <p-button label="Cancelar" styleClass="p-button-text" (click)="displayForm = false"></p-button>
-          <p-button label="Guardar" icon="pi pi-check" (click)="addNode()"></p-button>
-        </div>
+          <ng-template #body let-rowNode let-rowData="rowData" let-columns="columns">
+            <tr [ttRow]="rowNode" [ttSelectableRow]="rowNode">
+              <td *ngFor="let col of columns; let i = index">
+                <span class="flex items-center gap-2">
+                  <p-treeTableToggler [rowNode]="rowNode" *ngIf="i === 0"></p-treeTableToggler>
+                  <p-treeTableCheckbox [value]="rowNode" *ngIf="i === 0"></p-treeTableCheckbox>
+                  {{ rowData[col.field] }}
+                </span>
+              </td>
+              <td>
+                <div class="flex gap-2">
+                  <p-button icon="pi pi-pencil" styleClass="p-button-text p-button-warning" (click)="editNode(rowNode.node)"></p-button>
+                  <p-button icon="pi pi-trash" styleClass="p-button-text p-button-danger" (click)="deleteNode(rowNode.node)"></p-button>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+        </p-treetable>
       </div>
-    </p-dialog>
+
+      <p-dialog
+        [header]="isEditing ? 'Editar Artículo' : 'Agregar nuevo Articulo'"
+        [(visible)]="displayForm"
+        [modal]="true"
+        [style]="{ width: '20rem' }"
+      >
+        <div class="flex flex-col gap-3">
+          <div>
+            <label class="block mb-1 font-medium">Articulo</label>
+            <input pInputText class="w-full" [(ngModel)]="newNode.name" />
+          </div>
+          <div>
+            <label class="block mb-1 font-medium">Cantidad</label>
+            <input pInputText class="w-full" [(ngModel)]="newNode.size" />
+          </div>
+          <div>
+            <label class="block mb-1 font-medium">Nota</label>
+            <input pInputText class="w-full" [(ngModel)]="newNode.type" />
+          </div>
+          <div class="flex justify-end gap-2 mt-3">
+            <p-button label="Cancelar" styleClass="p-button-text" (click)="displayForm = false"></p-button>
+            <p-button label="Guardar" icon="pi pi-check" (click)="saveNode()"></p-button>
+          </div>
+        </div>
+      </p-dialog>
+    </div>
   `,
   styleUrls: ['./lista-viaje.scss'],
   providers: [NodeService]
 })
 export class ListaViajeComponent implements OnInit {
-  treeValue: TreeNode[] = [];
   treeTableValue: TreeNode[] = [];
-  selectedTreeValue: TreeNode[] = [];
   selectedTreeTableValue: any = {};
   cols: any[] = [];
+  displayForm = false;
+  isEditing = false;
+  selectedNode: TreeNode | null = null;
 
-  displayForm = false; 
-
-  newNode = {
-    name: '',
-    size: '',
-    type: ''
-  };
+  newNode = { name: '', size: '', type: '' };
 
   private nodeService = inject(NodeService);
 
   ngOnInit() {
-    this.nodeService.getFiles().then((files) => (this.treeValue = files));
     this.nodeService.getTreeTableNodes().then((files: any) => (this.treeTableValue = files));
 
     this.cols = [
@@ -135,27 +130,51 @@ export class ListaViajeComponent implements OnInit {
       { field: 'size', header: 'Cantidad' },
       { field: 'type', header: 'Nota' }
     ];
-
-    this.selectedTreeTableValue = {
-      '0-0': { partialChecked: false, checked: true }
-    };
   }
 
   showForm() {
+    this.isEditing = false;
+    this.newNode = { name: '', size: '', type: '' };
     this.displayForm = true;
   }
 
-  addNode() {
-    if (this.newNode.name.trim()) {
+  editNode(node: TreeNode) {
+    this.isEditing = true;
+    this.selectedNode = node;
+    // Cargamos los datos actuales en el formulario
+    this.newNode = { ...node.data };
+    this.displayForm = true;
+  }
+
+  saveNode() {
+    if (this.isEditing && this.selectedNode) {
+      // Actualizar nodo existente
+      this.selectedNode.data = { ...this.newNode };
+    } else {
+      // Agregar nuevo nodo
       const newItem: TreeNode = {
+        key: Math.random().toString(36).substring(2, 9), // Generar key única
         data: { ...this.newNode },
         children: []
       };
-
-      this.treeValue.push(newItem);
-
-      this.newNode = { name: '', size: '', type: '' };
-      this.displayForm = false;
+      this.treeTableValue = [...this.treeTableValue, newItem];
     }
+    this.displayForm = false;
+  }
+
+  deleteNode(node: TreeNode) {
+    this.treeTableValue = this.recursiveDelete(this.treeTableValue, node);
+  }
+
+  // Función auxiliar para eliminar nodos en cualquier nivel de profundidad
+  private recursiveDelete(nodes: TreeNode[], nodeToDelete: TreeNode): TreeNode[] {
+    return nodes
+      .filter(n => n !== nodeToDelete)
+      .map(n => {
+        if (n.children) {
+          n.children = this.recursiveDelete(n.children, nodeToDelete);
+        }
+        return n;
+      });
   }
 }

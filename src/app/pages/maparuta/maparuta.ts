@@ -6,14 +6,22 @@ import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
-import { TextareaModule } from 'primeng/textarea';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 
-// ==========================================================
-// COMPONENTE 1: MapaRutaComponent (Tu componente de viaje)
-// ==========================================================
+/* ======================= INTERFACE ======================= */
+interface Destino {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  fecha: string;
+  icon: string;
+  color: string;
+}
+
+/* ======================= STORAGE KEY ======================= */
+const STORAGE_KEY = 'mapa_ruta_destinos';
 
 @Component({
   selector: 'app-mapa-ruta',
@@ -27,53 +35,77 @@ import { ToastModule } from 'primeng/toast';
     DialogModule,
     InputTextModule,
     ConfirmDialogModule,
-    ToastModule,
+    ToastModule
   ],
   providers: [ConfirmationService, MessageService],
   template: `
     <div class="card">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-semibold">Mapa de Ruta de Viaje</h2>
-        <p-button icon="pi pi-plus" label="Agregar actividad" (onClick)="showDialog()"></p-button>
+
+      <!-- BOTONES DE DESTINOS -->
+      <div class="flex flex-wrap gap-2 mb-4">
+        <p-button
+          *ngFor="let destino of events"
+          class="p-button-sm text-white"
+          [label]="destino.titulo"
+          [style]="{ backgroundColor: destino.color, borderColor: destino.color }"
+          (onClick)="scrollToDestino(destino.id)">
+        </p-button>
       </div>
 
-      <p-timeline [value]="events" align="alternate" styleClass="customized-timeline">
+      <!-- HEADER -->
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold">Mapa de Ruta de Viaje</h2>
+        <p-button icon="pi pi-plus" label="Agregar destino" (onClick)="showDialog()"></p-button>
+      </div>
+
+      <!-- TIMELINE -->
+      <p-timeline [value]="events" align="alternate">
         <ng-template #marker let-event>
-          <span class="flex w-8 h-8 items-center justify-center text-white rounded-full z-10 shadow-sm" [style]="{ 'background-color': event.color }">
+          <span
+            class="flex w-8 h-8 items-center justify-center text-white rounded-full shadow-sm"
+            [style]="{ backgroundColor: event.color }">
             <i [class]="event.icon"></i>
           </span>
         </ng-template>
+
         <ng-template #content let-event>
-          <p-card [header]="event.titulo" [subheader]="event.fecha">
-            <p>{{ event.descripcion }}</p>
-            <div class="flex justify-end mt-2">
-              <p-button icon="pi pi-trash" severity="danger" text (onClick)="confirmDelete(event)"></p-button>
-            </div>
-          </p-card>
+          <div [attr.id]="event.id">
+            <p-card [header]="event.titulo" [subheader]="event.fecha">
+              <p>{{ event.descripcion }}</p>
+              <div class="flex justify-end mt-2">
+                <p-button
+                  icon="pi pi-trash"
+                  severity="danger"
+                  text
+                  (onClick)="confirmDelete(event)">
+                </p-button>
+              </div>
+            </p-card>
+          </div>
         </ng-template>
       </p-timeline>
 
-      <p-dialog header="Agregar Actividad" [(visible)]="visible" [modal]="true" [style]="{ width: '400px' }">
+      <!-- DIALOG -->
+      <p-dialog
+        header="Agregar Destino"
+        [(visible)]="visible"
+        [modal]="true"
+        [style]="{ width: '400px' }">
+
         <div class="flex flex-col gap-3">
-          <label for="titulo">Título</label>
-          <input id="titulo" pInputText [(ngModel)]="nuevoEvento.titulo" placeholder="Ej: Hotel, Vuelo, Excursión" />
+          <label>Destino</label>
+          <input pInputText [(ngModel)]="nuevoDestino.titulo" />
 
-         <label for="descripcion">Descripción</label>
-<textarea 
-  id="descripcion" 
-  pInputText 
-  [(ngModel)]="nuevoEvento.descripcion" 
-  rows="3" 
-  placeholder="Detalles del evento">
-</textarea>
+          <label>Descripción</label>
+          <textarea pInputText rows="3" [(ngModel)]="nuevoDestino.descripcion"></textarea>
 
-          <label for="fecha">Fecha</label>
-          <input id="fecha" type="date" pInputText [(ngModel)]="nuevoEvento.fecha" />
+          <label>Fecha</label>
+          <input type="date" pInputText [(ngModel)]="nuevoDestino.fecha" />
         </div>
 
         <ng-template pTemplate="footer">
-          <p-button label="Cancelar" icon="pi pi-times" text (onClick)="visible=false"></p-button>
-          <p-button label="Agregar" icon="pi pi-check" (onClick)="agregarEvento()"></p-button>
+          <p-button label="Cancelar" text (onClick)="visible = false"></p-button>
+          <p-button label="Agregar" icon="pi pi-check" (onClick)="agregarDestino()"></p-button>
         </ng-template>
       </p-dialog>
 
@@ -83,83 +115,131 @@ import { ToastModule } from 'primeng/toast';
   `
 })
 export class MapaRutaComponent implements OnInit {
+
   visible = false;
-  events: any[] = [];
-  nuevoEvento = { titulo: '', descripcion: '', fecha: '', icon: 'pi pi-map-marker', color: '#2196F3' };
 
-  constructor(private confirmationService: ConfirmationService, private messageService: MessageService) { }
+  events: Destino[] = [];
 
+  nuevoDestino: Destino = {
+    id: '',
+    titulo: '',
+    descripcion: '',
+    fecha: '',
+    icon: 'pi pi-map-marker',
+    color: ''
+  };
+
+  colores: string[] = [
+    '#2196F3',
+    '#4CAF50',
+    '#FF9800',
+    '#9C27B0',
+    '#F44336',
+    '#009688'
+  ];
+
+  constructor(
+    private confirmationService: ConfirmationService,
+    private messageService: MessageService
+  ) {}
+
+  /* ======================= INIT ======================= */
   ngOnInit(): void {
-    // Inicializar con datos para que el timeline sea visible al cargar
-    this.events = [
-      { titulo: 'Llegada al Destino', descripcion: 'Vuelo aéreo y recogida de equipaje.', fecha: '2024-10-20', icon: 'pi pi-plane', color: '#607D8B' },
-      { titulo: 'Check-in en Hotel', descripcion: 'Registro en el Hotel Central.', fecha: '2024-10-20', icon: 'pi pi-home', color: '#4CAF50' },
-      { titulo: 'Visita Histórica', descripcion: 'Tour guiado por el centro de la ciudad.', fecha: '2024-10-21', icon: 'pi pi-compass', color: '#FF9800' }
-    ];
-  }
+    this.cargarDesdeStorage();
 
-  showDialog() {
-    this.visible = true;
-  }
-
-  agregarEvento() {
-    if (this.nuevoEvento.titulo && this.nuevoEvento.descripcion && this.nuevoEvento.fecha) {
-      this.events.push({ ...this.nuevoEvento });
-
-      // Ordenar por fecha para mantener la ruta cronológica
-      this.events.sort((a, b) => {
-        if (a.fecha < b.fecha) return -1;
-        if (a.fecha > b.fecha) return 1;
-        return 0;
-      });
-
-      this.nuevoEvento = { titulo: '', descripcion: '', fecha: '', icon: 'pi pi-map-marker', color: '#2196F3' };
-      this.visible = false;
-      this.messageService.add({ severity: 'success', summary: 'Agregado', detail: 'Actividad añadida al mapa de ruta' });
-    } else {
-      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Todos los campos son obligatorios' });
+    if (this.events.length === 0) {
+      this.events = [
+        {
+          id: crypto.randomUUID(),
+          titulo: 'Madrid',
+          descripcion: 'Llegada y recorrido inicial.',
+          fecha: '2024-10-20',
+          icon: 'pi pi-plane',
+          color: '#2196F3'
+        },
+        {
+          id: crypto.randomUUID(),
+          titulo: 'Roma',
+          descripcion: 'Tour histórico por la ciudad.',
+          fecha: '2024-10-22',
+          icon: 'pi pi-compass',
+          color: '#4CAF50'
+        }
+      ];
+      this.guardarEnStorage();
     }
   }
 
-  confirmDelete(event: any) {
+  /* ======================= STORAGE ======================= */
+  guardarEnStorage(): void {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.events));
+  }
+
+  cargarDesdeStorage(): void {
+    this.events = JSON.parse(
+      localStorage.getItem(STORAGE_KEY) ?? '[]'
+    ) as Destino[];
+  }
+
+  /* ======================= ACCIONES ======================= */
+  showDialog(): void {
+    this.visible = true;
+  }
+
+  agregarDestino(): void {
+    if (!this.nuevoDestino.titulo || !this.nuevoDestino.fecha) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Destino y fecha son obligatorios'
+      });
+      return;
+    }
+
+    const color = this.colores[Math.floor(Math.random() * this.colores.length)];
+
+    this.events.push({
+      ...this.nuevoDestino,
+      id: crypto.randomUUID(),
+      color
+    });
+
+    this.events.sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+    this.guardarEnStorage();
+
+    this.nuevoDestino = {
+      id: '',
+      titulo: '',
+      descripcion: '',
+      fecha: '',
+      icon: 'pi pi-map-marker',
+      color: ''
+    };
+
+    this.visible = false;
+
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Destino agregado',
+      detail: 'El destino fue guardado correctamente'
+    });
+  }
+
+  confirmDelete(destino: Destino): void {
     this.confirmationService.confirm({
-      message: `¿Deseas eliminar "${event.titulo}" del mapa de ruta?`,
-      acceptLabel: 'Sí',
-      rejectLabel: 'No',
+      message: `¿Eliminar el destino "${destino.titulo}"?`,
       accept: () => {
-        this.events = this.events.filter(e => e !== event);
-        this.messageService.add({ severity: 'info', summary: 'Eliminado', detail: 'Actividad eliminada correctamente' });
+        this.events = this.events.filter(d => d.id !== destino.id);
+        this.guardarEnStorage();
       }
     });
   }
-}
 
-// ==========================================================
-// COMPONENTE 2: TimelineDemo (El componente de demostración)
-// *Es válido tener varios componentes en un solo archivo si son standalone y no están anidados*
-// ==========================================================
-
-@Component({
-  selector: 'app-timeline-demo',
-  standalone: true,
-  imports: [CommonModule, TimelineModule, ButtonModule, CardModule],
-  template: `
-    <div class="grid grid-cols-12 gap-8">
-      </div>
-  `
-})
-export class TimelineDemo implements OnInit {
-  events1: any[] = [];
-  events2: any[] = [];
-
-  ngOnInit() {
-    this.events1 = [
-      { status: 'Ordered', date: '15/10/2020 10:30', icon: 'pi pi-shopping-cart', color: '#9C27B0', image: 'game-controller.jpg' },
-      { status: 'Processing', date: '15/10/2020 14:00', icon: 'pi pi-cog', color: '#673AB7' },
-      { status: 'Shipped', date: '15/10/2020 16:15', icon: 'pi pi-envelope', color: '#FF9800' },
-      { status: 'Delivered', date: '16/10/2020 10:00', icon: 'pi pi-check', color: '#607D8B' }
-    ];
-
-    this.events2 = ['2020', '2021', '2022', '2023'];
+  scrollToDestino(id: string): void {
+    document.getElementById(id)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center'
+    });
   }
 }

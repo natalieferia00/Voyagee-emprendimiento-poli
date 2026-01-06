@@ -1,205 +1,142 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, signal, ViewChild } from '@angular/core';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import { InputTextModule } from 'primeng/inputtext';
-import { MultiSelectModule } from 'primeng/multiselect';
-import { SelectModule } from 'primeng/select';
-import { SliderModule } from 'primeng/slider';
 import { Table, TableModule } from 'primeng/table';
-import { ProgressBarModule } from 'primeng/progressbar';
-import { ToggleButtonModule } from 'primeng/togglebutton';
-import { ToastModule } from 'primeng/toast';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
-import { RatingModule } from 'primeng/rating';
-import { RippleModule } from 'primeng/ripple';
+import { ToastModule } from 'primeng/toast';
+import { ToolbarModule } from 'primeng/toolbar';
+import { InputTextModule } from 'primeng/inputtext';
+import { TextareaModule } from 'primeng/textarea';
+import { SelectModule } from 'primeng/select';
+import { DialogModule } from 'primeng/dialog';
+import { TagModule } from 'primeng/tag';
 import { InputIconModule } from 'primeng/inputicon';
 import { IconFieldModule } from 'primeng/iconfield';
-import { TagModule } from 'primeng/tag';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { TooltipModule } from 'primeng/tooltip';
 
-// Interfaz para el objeto de Viaje
 interface Viaje {
-  id: number;
-  origen: string;
-  destino: string;
-  fechaSalida: Date;
-  transportista: 'Aéreo' | 'Marítimo' | 'Terrestre';
-  estado: 'pendiente' | 'en curso' | 'entregado' | 'cancelado';
-  costo: number;
-  urlSeguimiento: string; // URL o ID de seguimiento
-  prioridad: number; // Valor de 0 a 100 para la barra de progreso
-  descripcion: string;
+    id?: string;
+    origen?: string;
+    destino?: string;
+    medioTransporte?: string;
+    estado?: string;
+    costo?: number;
+    urlProveedor?: string;
+    descripcion?: string;
 }
 
 @Component({
-  selector: 'app-gestiondetransporte',
-  standalone: true, // <-- Componente Standalone
-  imports: [
-    TableModule,
-    MultiSelectModule,
-    SelectModule,
-    InputIconModule,
-    TagModule,
-    InputTextModule,
-    SliderModule,
-    ProgressBarModule,
-    ToggleButtonModule,
-    ToastModule,
-    CommonModule,
-    FormsModule,
-    ButtonModule,
-    RatingModule,
-    RippleModule,
-    IconFieldModule
-  ],
-  templateUrl: './gestiondetransporte.html',
-  styleUrl: './gestiondetransporte.scss',
-  providers: [MessageService, ConfirmationService]
+    selector: 'app-gestion-transporte',
+    standalone: true,
+    imports: [
+        CommonModule, TableModule, FormsModule, ButtonModule, ToastModule,
+        ToolbarModule, InputTextModule, TextareaModule, SelectModule,
+        DialogModule, TagModule, InputIconModule, IconFieldModule, 
+        ConfirmDialogModule, InputNumberModule, TooltipModule
+    ],
+    templateUrl: './gestiondetransporte.html',
+    providers: [MessageService, ConfirmationService]
 })
 export class Gestiondetransporte implements OnInit {
-  viajes: Viaje[] = [];
-  estadosViaje: any[] = [];
-  transportistas: any[] = [];
+    viajeDialog: boolean = false;
+    viajes = signal<Viaje[]>([]);
+    viaje: Viaje = {};
+    submitted: boolean = false;
 
-  loading: boolean = true;
-
-  @ViewChild('filter') filter!: ElementRef;
-  @ViewChild('dt1') dt1!: Table;
-viaje: any;
-
-  constructor(private messageService: MessageService) {}
-
-  ngOnInit() {
-    this.viajes = this.getViajesData();
-    this.loading = false;
-
-    // Opciones para el filtro de Estado
-    this.estadosViaje = [
-      { label: 'Pendiente', value: 'pendiente' },
-      { label: 'En Curso', value: 'en curso' },
-      { label: 'Entregado', value: 'entregado' },
-      { label: 'Cancelado', value: 'cancelado' }
+    mediosTransporte = [
+        { label: 'Aéreo', value: 'Aéreo' },
+        { label: 'Marítimo', value: 'Marítimo' },
+        { label: 'Terrestre', value: 'Terrestre' }
     ];
 
-    // Opciones para el filtro de Transportista
-    this.transportistas = [
-      { name: 'Transporte Aéreo', value: 'Aéreo' },
-      { name: 'Transporte Marítimo', value: 'Marítimo' },
-      { name: 'Transporte Terrestre', value: 'Terrestre' }
+    estados = [
+        { label: 'Pendiente', value: 'pendiente' },
+        { label: 'Visto', value: 'visto' },
+        { label: 'Reservado', value: 'reservado' },
+        { label: 'Cancelado', value: 'cancelado' }
     ];
-  }
 
-  // Datos estáticos de ejemplo
-  getViajesData(): Viaje[] {
-    return [
-      {
-        id: 1001,
-        origen: 'BOG',
-        destino: 'MAD',
-        fechaSalida: new Date('2025-11-15'),
-        transportista: 'Aéreo',
-        estado: 'pendiente',
-        costo: 1500.50,
-        urlSeguimiento: 'https://rastreo.com/trk1001',
-        prioridad: 85,
-        descripcion: 'Vuelo economico.'
-      },
-      {
-        id: 1002,
-        origen: 'BAQ',
-        destino: 'NYC',
-        fechaSalida: new Date('2025-11-01'),
-        transportista: 'Marítimo',
-        estado: 'entregado',
-        costo: 3200.00,
-        urlSeguimiento: 'https://rastreo.com/trk1002',
-        prioridad: 92,
-         descripcion: 'pasaje.'
-      },
-      {
-        id: 1003,
-        origen: 'CLO',
-        destino: 'LIM',
-        fechaSalida: new Date('2025-11-10'),
-        transportista: 'Terrestre',
-        estado: 'en curso',
-        costo: 450.75,
-        urlSeguimiento: 'https://rastreo.com/trk1003',
-        prioridad: 70,
-        descripcion: 'pasaje.'
-      },
-      {
-        id: 1004,
-        origen: 'CTG',
-        destino: 'BOG',
-        fechaSalida: new Date('2025-10-25'),
-        transportista: 'Terrestre',
-        estado: 'cancelado',
-        costo: 120.00,
-        urlSeguimiento: 'https://rastreo.com/trk1004',
-        prioridad: 50,
-        descripcion: 'pasaje.'
-      },
-      {
-        id: 1005,
-        origen: 'MDE',
-        destino: 'MEX',
-        fechaSalida: new Date('2025-11-20'),
-        transportista: 'Aéreo',
-        estado: 'pendiente',
-        costo: 890.99,
-        urlSeguimiento: 'https://rastreo.com/trk1005',
-        prioridad: 98,
-        descripcion: 'pasaje.'
-      }
-    ];
-  }
+    constructor(private messageService: MessageService, private confirmationService: ConfirmationService) {}
 
-  // Aplica filtro global
-  onGlobalFilter(table: Table, event: Event) {
-    table.filterGlobal((event.target as HTMLInputElement).value, 'contains');
-  }
-
-  // Limpia todos los filtros
-  clearFilter() {
-    this.dt1.clear();
-    if (this.filter.nativeElement) {
-      this.filter.nativeElement.value = '';
+    ngOnInit() {
+        this.viajes.set([
+            { 
+                id: '1', 
+                origen: 'Medellín', 
+                destino: 'Madrid', 
+                medioTransporte: 'Aéreo', 
+                estado: 'visto', 
+                costo: 850, 
+                urlProveedor: 'https://avianca.com', 
+                descripcion: 'Vuelo directo con maleta incluida' 
+            }
+        ]);
     }
-  }
 
-  verDescripcion(descripcion: string) {
-  alert("Descripción del viaje:\n\n" + descripcion);
-}
+  
+    calcularTotal() {
+        return this.viajes().reduce((acc, v) => acc + (v.costo || 0), 0);
+    }
 
+    onStatusChange(viaje: Viaje, nuevoEstado: string) {
+        this.messageService.add({ 
+            severity: 'info', 
+            summary: 'Estado Actualizado', 
+            detail: `Viaje a ${viaje.destino} ahora está ${nuevoEstado}` 
+        });
+    }
 
-  getSeverity(estado: Viaje['estado']): 'success' | 'warn' | 'danger' | 'info' {
-  switch (estado) {
-    case 'entregado':
-      return 'success';
-    case 'en curso':
-      return 'warn'; // <-- ¡Cambio clave aquí! De 'warning' a 'warn'
-    case 'cancelado':
-      return 'danger';
-    case 'pendiente':
-    default:
-      return 'info';
-  }
-}
-getButtonColor(prioridad: number): "success" | "warning" | "danger" {
-  if (prioridad >= 85) return "success";
-  if (prioridad >= 60) return "warning";
-  return "danger";
-}
+    getSeverity(status: string): "success" | "secondary" | "info" | "warn" | "danger" | any {
+        switch (status) {
+            case 'reservado': return 'success';
+            case 'visto': return 'info';
+            case 'pendiente': return 'warn';
+            case 'cancelado': return 'danger';
+            default: return 'secondary';
+        }
+    }
 
+    openNew() {
+        this.viaje = { estado: 'pendiente' };
+        this.submitted = false;
+        this.viajeDialog = true;
+    }
 
-  // Formatea el costo a moneda (ejemplo con COP)
-  formatCurrency(value: number) {
-    return value.toLocaleString('es-CO', { style: 'currency', currency: 'COP' });
-  }
+    editViaje(viaje: Viaje) {
+        this.viaje = { ...viaje };
+        this.viajeDialog = true;
+    }
 
-  // Formatea la fecha de salida
-  formatDate(date: Date) {
-      return date.toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', day: '2-digit' });
-  }
+    deleteViaje(viaje: Viaje) {
+        this.confirmationService.confirm({
+            message: `¿Estás seguro de eliminar el viaje a ${viaje.destino}?`,
+            header: 'Confirmar eliminación',
+            icon: 'pi pi-exclamation-triangle',
+            accept: () => {
+                this.viajes.set(this.viajes().filter((val) => val.id !== viaje.id));
+                this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Viaje Eliminado' });
+            }
+        });
+    }
+
+    saveViaje() {
+        this.submitted = true;
+        if (this.viaje.origen?.trim() && this.viaje.destino?.trim()) {
+            let _viajes = [...this.viajes()];
+            if (this.viaje.id) {
+                const index = _viajes.findIndex(v => v.id === this.viaje.id);
+                _viajes[index] = this.viaje;
+            } else {
+                this.viaje.id = Math.random().toString(36).substring(2);
+                _viajes.push(this.viaje);
+            }
+            this.viajes.set(_viajes);
+            this.viajeDialog = false;
+            this.viaje = {};
+            this.messageService.add({ severity: 'success', summary: 'Operación Exitosa', detail: 'Los datos se han guardado.' });
+        }
+    }
 }
