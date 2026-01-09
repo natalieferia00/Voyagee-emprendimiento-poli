@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MessageService, ConfirmationService } from 'primeng/api';
@@ -12,193 +12,167 @@ import { DialogModule } from 'primeng/dialog';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TagModule } from 'primeng/tag';
-import { CardModule } from 'primeng/card';
-
-interface Gasto {
-    id: number;
-    categoria: string;
-    descripcion: string;
-    monto: number;
-}
-
-interface Destino {
-    id: number;
-    nombre: string;
-    presupuestoAsignado: number;
-    gastos: Gasto[];
-}
 
 @Component({
     selector: 'app-calculadora-gastos',
     standalone: true,
-    imports: [
-        CommonModule, FormsModule, TableModule, ButtonModule, 
-        InputTextModule, InputNumberModule, DialogModule, 
-        ToastModule, ConfirmDialogModule, TagModule, CardModule
-    ],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, InputTextModule, InputNumberModule, DialogModule, ToastModule, ConfirmDialogModule, TagModule],
     providers: [MessageService, ConfirmationService, CurrencyPipe],
     template: `
         <p-toast></p-toast>
         <p-confirmDialog></p-confirmDialog>
-
-        <div class="p-4">
-            <p-card header="Gestión de Presupuesto Viajero">
-                <div class="flex mb-4">
-                    <p-button label="Nuevo Destino" icon="pi pi-plus" (onClick)="showDestinoDialog()"></p-button>
+        
+        <div class="card">
+            <h5 class="text-xl font-bold mb-4">Control de Presupuesto General</h5>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 bg-surface-50 dark:bg-surface-900 p-4 rounded-xl border border-surface">
+                <div class="flex flex-col">
+                    <label class="text-sm font-medium mb-1">Presupuesto Global</label>
+                    <p-inputNumber [(ngModel)]="presupuestoGlobal" (onBlur)="actualizarTodo()" mode="currency" currency="USD" placeholder="Ejem: 5000"></p-inputNumber>
                 </div>
+                <div class="flex flex-col">
+                    <span class="text-sm font-medium mb-1">Total Gastado</span>
+                    <span class="text-2xl font-bold" [ngClass]="{'text-red-500': totalGastado > presupuestoGlobal}">
+                        {{ totalGastado | currency:'USD' }}
+                    </span>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-sm font-medium mb-1">Balance</span>
+                    <p-tag [severity]="totalGastado > presupuestoGlobal ? 'danger' : 'success'" 
+                           [value]="((presupuestoGlobal - totalGastado) | currency:'USD') ?? ''" styleClass="text-lg"></p-tag>
+                </div>
+            </div>
 
-                <p-table [value]="destinos" styleClass="p-datatable-sm" [responsiveLayout]="'scroll'">
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th>Destino</th>
-                            <th>Presupuesto</th>
-                            <th>Gastado</th>
-                            <th>Balance</th>
-                            <th style="width: 12rem" class="text-center">Acciones</th>
-                        </tr>
-                    </ng-template>
+            <div class="flex justify-between items-center mb-4">
+                <h6 class="m-0 font-bold">Destinos y Desglose</h6>
+                <p-button label="Nuevo Destino" icon="pi pi-plus" size="small" (onClick)="displayDestino = true"></p-button>
+            </div>
 
-                    <ng-template pTemplate="body" let-destino>
-                        <tr>
-                            <td><span class="font-bold text-700">{{ destino.nombre }}</span></td>
-                            <td>{{ destino.presupuestoAsignado | currency:'USD' }}</td>
-                            <td class="text-primary font-bold">{{ calcularTotalDestino(destino) | currency:'USD' }}</td>
-                            <td>
-                                <p-tag [severity]="getBadgeSeverity(destino)" 
-                                       [value]="(destino.presupuestoAsignado - calcularTotalDestino(destino) | currency:'USD') ?? ''">
-                                </p-tag>
-                            </td>
-                            <td class="flex justify-content-center gap-2">
-                                <p-button icon="pi pi-eye" styleClass="p-button-rounded p-button-text" (onClick)="verDetalle(destino)"></p-button>
-                                <p-button icon="pi pi-plus" label="Gasto" styleClass="p-button-sm p-button-success" (onClick)="showGastoDialog(destino)"></p-button>
-                                <p-button icon="pi pi-trash" styleClass="p-button-sm p-button-danger p-button-text" (onClick)="eliminarDestino(destino)"></p-button>
-                            </td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-            </p-card>
+            <p-table [value]="destinos" responsiveLayout="scroll" styleClass="p-datatable-sm">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>Destino</th>
+                        <th>Gasto Acumulado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-d>
+                    <tr>
+                        <td class="font-bold">{{d.nombre}}</td>
+                        <td class="text-primary font-bold">{{sumarGastos(d) | currency:'USD'}}</td>
+                        <td>
+                            <div class="flex gap-2">
+                                <p-button icon="pi pi-plus" styleClass="p-button-success p-button-sm p-button-text" (onClick)="abrirGasto(d)"></p-button>
+                                <p-button icon="pi pi-trash" styleClass="p-button-danger p-button-sm p-button-text" (onClick)="eliminarDestino(d)"></p-button>
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
         </div>
 
-        <p-dialog [header]="'Nuevo Gasto para ' + (destinoActual?.nombre ?? '')" [(visible)]="displayGastoDialog" [modal]="true" [style]="{width: '350px'}">
-            <div class="p-fluid">
-                <div class="field mb-3">
-                    <label class="block font-bold mb-1">Categoría</label>
-                    <select class="p-inputtext w-full" [(ngModel)]="nuevoGasto.categoria">
-                        <option value="" disabled>Seleccione...</option>
-                        <option *ngFor="let cat of opcionesCategorias" [value]="cat.value">{{ cat.label }}</option>
-                    </select>
-                </div>
-                <div class="field mb-3">
-                    <label class="block font-bold mb-1">Monto (USD)</label>
-                    <p-inputNumber [(ngModel)]="nuevoGasto.monto" mode="currency" currency="USD" locale="en-US"></p-inputNumber>
-                </div>
+        <p-dialog header="Agregar Destino" [(visible)]="displayDestino" [modal]="true" [style]="{width: '300px'}">
+            <div class="flex flex-col gap-3 p-fluid">
+                <input pInputText [(ngModel)]="tempDestino.nombre" placeholder="Nombre Destino">
+                <p-button label="Guardar" (onClick)="guardarDestino()"></p-button>
             </div>
-            <ng-template pTemplate="footer">
-                <p-button label="Guardar" icon="pi pi-check" (onClick)="agregarGasto()"></p-button>
-            </ng-template>
         </p-dialog>
 
-        <p-dialog header="Registrar Destino" [(visible)]="displayDestinoDialog" [modal]="true" [style]="{width: '350px'}">
-            <div class="p-fluid">
-                <div class="field mb-3">
-                    <label class="block font-bold mb-1">Nombre</label>
-                    <input pInputText [(ngModel)]="nuevoDestino.nombre" />
-                </div>
-                <div class="field mb-3">
-                    <label class="block font-bold mb-1">Presupuesto</label>
-                    <p-inputNumber [(ngModel)]="nuevoDestino.presupuestoAsignado" mode="currency" currency="USD"></p-inputNumber>
-                </div>
+        <p-dialog header="Añadir Gasto" [(visible)]="displayGasto" [modal]="true" [style]="{width: '300px'}">
+            <div class="flex flex-col gap-3 p-fluid">
+                <select class="p-inputtext" [(ngModel)]="tempGasto.categoria">
+                    <option value="Vuelos">Tiquetes</option>
+                    <option value="Comida">Alimentación</option>
+                    <option value="Hospedaje">Hospedaje</option>
+                    <option value="Otros">Seguros/Otros</option>
+                </select>
+                <p-inputNumber [(ngModel)]="tempGasto.monto" mode="currency" currency="USD" placeholder="Monto"></p-inputNumber>
+                <p-button label="Registrar Gasto" (onClick)="guardarGasto()"></p-button>
             </div>
-            <ng-template pTemplate="footer">
-                <p-button label="Crear" icon="pi pi-check" (onClick)="agregarDestino()"></p-button>
-            </ng-template>
         </p-dialog>
-    `,
-    changeDetection: ChangeDetectionStrategy.OnPush,
+    `
 })
 export class CalculadoraGastosComponent implements OnInit {
     private confirmationService = inject(ConfirmationService);
-    private LS_KEY_CALC = 'viajes_v10_final';
-    private LS_KEY_WIDGET = 'app_presupuesto_viaje';
+    
+    destinos: any[] = [];
+    presupuestoGlobal: number = 0;
+    totalGastado: number = 0;
+    
+    displayDestino = false;
+    displayGasto = false;
+    destinoActual: any = null;
+    
+    tempDestino = { nombre: '' };
+    tempGasto = { categoria: 'Vuelos', monto: 0 };
 
-    destinos: Destino[] = [];
-    destinoActual?: Destino;
-    displayDestinoDialog = false;
-    displayGastoDialog = false;
+    private readonly LS_KEY_DATA = 'mis_destinos_data_v2';
+    private readonly LS_KEY_GLOBAL = 'mi_presupuesto_global';
+    private readonly LS_KEY_SYNC = 'app_presupuesto_sync';
 
-    opcionesCategorias = [
-        { label: 'Tiquetes', value: 'Vuelos' },
-        { label: 'Alimentación', value: 'Comida' },
-        { label: 'Hospedaje', value: 'Hospedaje' },
-        { label: 'Seguros', value: 'Transporte' },
-        { label: 'Equipaje', value: 'Otros' }
-    ];
-
-    nuevoDestino: Destino = { id: 0, nombre: '', presupuestoAsignado: 0, gastos: [] };
-    nuevoGasto: Gasto = { id: 0, categoria: '', descripcion: '', monto: 0 };
-
-    ngOnInit() { this.cargarDatos(); }
-
-    private cargarDatos() {
-        const stored = localStorage.getItem(this.LS_KEY_CALC);
-        if (stored) this.destinos = JSON.parse(stored);
+    ngOnInit() {
+        // ✅ CORRECCIÓN: Usar ?? '' para evitar el error de string | null
+        const savedData = localStorage.getItem(this.LS_KEY_DATA) ?? '';
+        const savedGlobal = localStorage.getItem(this.LS_KEY_GLOBAL) ?? '0';
+        
+        if (savedData) this.destinos = JSON.parse(savedData);
+        this.presupuestoGlobal = JSON.parse(savedGlobal);
+        
+        this.recalcularYNotificar();
     }
 
-    private guardarTodo() {
-        localStorage.setItem(this.LS_KEY_CALC, JSON.stringify(this.destinos));
-        this.sincronizarWidget();
+    guardarDestino() {
+        if (!this.tempDestino.nombre) return;
+        this.destinos = [...this.destinos, { ...this.tempDestino, id: Date.now(), gastos: [] }];
+        this.tempDestino = { nombre: '' };
+        this.displayDestino = false;
+        this.actualizarTodo();
     }
 
-    private sincronizarWidget() {
-        const categoriasMapa = [
-            { nombre: 'Tiquetes', subtitulo: 'tiquetes de viaje', color: 'bg-orange-500', slug: 'Vuelos' },
-            { nombre: 'Alimentacion', subtitulo: 'plan de comidas', color: 'bg-cyan-500', slug: 'Comida' },
-            { nombre: 'Hospedaje', subtitulo: 'Hoteles, hostales, etc', color: 'bg-pink-500', slug: 'Hospedaje' },
-            { nombre: 'Seguros', subtitulo: 'seguros de viaje', color: 'bg-green-500', slug: 'Transporte' },
-            { nombre: 'Equipaje', subtitulo: 'checklist equipaje', color: 'bg-purple-500', slug: 'Otros' }
+    abrirGasto(d: any) { this.destinoActual = d; this.displayGasto = true; }
+
+    guardarGasto() {
+        if (this.tempGasto.monto <= 0 || !this.destinoActual) return;
+        this.destinoActual.gastos.push({ ...this.tempGasto });
+        this.destinos = [...this.destinos];
+        this.tempGasto = { categoria: 'Vuelos', monto: 0 };
+        this.displayGasto = false;
+        this.actualizarTodo();
+    }
+
+    eliminarDestino(d: any) {
+        this.confirmationService.confirm({
+            message: `¿Estás seguro de eliminar el destino ${d.nombre}?`,
+            accept: () => {
+                this.destinos = this.destinos.filter(x => x.id !== d.id);
+                this.actualizarTodo();
+            }
+        });
+    }
+
+    actualizarTodo() {
+        localStorage.setItem(this.LS_KEY_DATA, JSON.stringify(this.destinos));
+        localStorage.setItem(this.LS_KEY_GLOBAL, JSON.stringify(this.presupuestoGlobal));
+        this.recalcularYNotificar();
+    }
+
+    recalcularYNotificar() {
+        this.totalGastado = this.destinos.reduce((acc, d) => acc + this.sumarGastos(d), 0);
+        const suma = (cat: string) => this.destinos.reduce((acc, d) => 
+            acc + (d.gastos || []).filter((g: any) => g.categoria === cat).reduce((s: number, g: any) => s + g.monto, 0), 0);
+
+        const presupuestoPorCat = this.presupuestoGlobal / 4;
+
+        const dataWidget = [
+            { nombre: 'Tiquetes', color: 'bg-orange-500', gastado: suma('Vuelos'), total: presupuestoPorCat || 1 },
+            { nombre: 'Alimentación', color: 'bg-cyan-500', gastado: suma('Comida'), total: presupuestoPorCat || 1 },
+            { nombre: 'Hospedaje', color: 'bg-pink-500', gastado: suma('Hospedaje'), total: presupuestoPorCat || 1 },
+            { nombre: 'Otros', color: 'bg-green-500', gastado: suma('Otros'), total: presupuestoPorCat || 1 }
         ];
 
-        const presupuestoTotal = this.destinos.reduce((acc, d) => acc + d.presupuestoAsignado, 0);
-        const presupuestoPorCat = presupuestoTotal / categoriasMapa.length;
-
-        const dataWidget = categoriasMapa.map(cat => {
-            const gastado = this.destinos.reduce((acc, d) => {
-                const sub = d.gastos.filter(g => g.categoria === cat.slug).reduce((s, g) => s + g.monto, 0);
-                return acc + sub;
-            }, 0);
-            return {
-                ...cat,
-                gastado: gastado,
-                total: presupuestoPorCat || 100
-            };
-        });
-
-        localStorage.setItem(this.LS_KEY_WIDGET, JSON.stringify(dataWidget));
+        localStorage.setItem(this.LS_KEY_SYNC, JSON.stringify(dataWidget));
         window.dispatchEvent(new Event('storage'));
     }
 
-    agregarDestino() {
-        if (this.nuevoDestino.nombre) {
-            this.destinos = [...this.destinos, { ...this.nuevoDestino, id: Date.now(), gastos: [] }];
-            this.guardarTodo();
-            this.displayDestinoDialog = false;
-        }
-    }
-
-    agregarGasto() {
-        if (this.destinoActual && this.nuevoGasto.monto > 0) {
-            this.destinoActual.gastos.push({ ...this.nuevoGasto, id: Date.now() });
-            this.destinos = [...this.destinos];
-            this.guardarTodo();
-            this.displayGastoDialog = false;
-        }
-    }
-
-    // Funciones auxiliares
-    calcularTotalDestino(d: Destino) { return d.gastos.reduce((acc, g) => acc + g.monto, 0); }
-    getBadgeSeverity(d: Destino) { return (d.presupuestoAsignado - this.calcularTotalDestino(d)) < 0 ? 'danger' : 'success'; }
-    showDestinoDialog() { this.nuevoDestino = { id: 0, nombre: '', presupuestoAsignado: 0, gastos: [] }; this.displayDestinoDialog = true; }
-    showGastoDialog(d: Destino) { this.destinoActual = d; this.nuevoGasto = { id: 0, categoria: '', descripcion: '', monto: 0 }; this.displayGastoDialog = true; }
-    eliminarDestino(d: Destino) { this.confirmationService.confirm({ message: '¿Eliminar?', accept: () => { this.destinos = this.destinos.filter(x => x.id !== d.id); this.guardarTodo(); } }); }
-    verDetalle(d: any) { /* Implementar si se desea */ }
-}
+    sumarGastos(d: any) { return (d.gastos || []).reduce((acc: number, g: any) => acc + g.monto, 0); }
+} 

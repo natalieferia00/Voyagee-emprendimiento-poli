@@ -1,10 +1,10 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
+import { CommonModule, CurrencyPipe } from '@angular/common';
+/* PrimeNG */
 import { RippleModule } from 'primeng/ripple';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
-import { CommonModule, CurrencyPipe } from '@angular/common';
 
-// Mantenemos la estructura de datos compatible con tu calculadora
 interface Gasto {
     id: number;
     categoria: string;
@@ -15,7 +15,7 @@ interface Gasto {
 interface Destino {
     id: number;
     nombre: string;
-    presupuestoAsignado: number;
+    presupuestoAsignado: number; // Mantenemos compatibilidad con tu estructura
     gastos: Gasto[];
 }
 
@@ -25,9 +25,9 @@ interface Destino {
     imports: [CommonModule, TableModule, ButtonModule, RippleModule, CurrencyPipe], 
     template: `
         <div class="card mb-0">
-            <div class="flex justify-content-between align-items-center mb-4">
+            <div class="flex justify-between items-center mb-4">
                 <div class="font-semibold text-xl">Resumen de Destinos</div>
-                <p-button icon="pi pi-refresh" styleClass="p-button-text p-button-sm" (onClick)="loadFromStorage()"></p-button>
+                <p-button icon="pi pi-refresh" [rounded]="true" [text]="true" (onClick)="loadFromStorage()"></p-button>
             </div>
             
             <p-table [value]="destinations" [paginator]="true" [rows]="5" responsiveLayout="scroll">
@@ -35,36 +35,34 @@ interface Destino {
                     <tr>
                         <th style="width: 4rem">Info</th> 
                         <th pSortableColumn="nombre">Destino <p-sortIcon field="nombre"></p-sortIcon></th>
-                        <th pSortableColumn="presupuestoAsignado">Presupuesto <p-sortIcon field="presupuestoAsignado"></p-sortIcon></th>
-                        <th pSortableColumn="totalGastado">Gastado <p-sortIcon field="totalGastado"></p-sortIcon></th>
                         <th>Estado</th>
+                        <th pSortableColumn="montoTotal" class="text-right">Total Gastado <p-sortIcon field="montoTotal"></p-sortIcon></th>
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="body" let-destination>
                     <tr>
                         <td>
-                            <i class="pi pi-eye text-2xl text-blue-500"></i> 
+                            <div class="flex items-center justify-center bg-blue-100 dark:bg-blue-400/10 rounded-full" style="width: 2.5rem; height: 2.5rem">
+                                <i class="pi pi-map text-blue-500"></i>
+                            </div>
                         </td>
-                        <td style="width: 35%; min-width: 7rem;">
-                            <span class="font-medium">{{ destination.nombre }}</span>
+                        <td style="width: 40%;">
+                            <span class="font-medium text-surface-900 dark:text-surface-0">{{ destination.nombre }}</span>
                         </td> 
-                        <td style="width: 25%;">
-                            {{ destination.presupuestoAsignado | currency: 'USD' }}
-                        </td>
-                        <td style="width: 25%;" class="font-bold">
-                            {{ calculateTotal(destination) | currency: 'USD' }}
-                        </td> 
-                        <td style="width: 15%;">
+                        <td style="width: 30%;">
                             <span [class]="getBadgeClass(destination)">
                                 {{ getStatus(destination) }}
                             </span>
                         </td>
+                        <td style="width: 30%;" class="text-right font-bold">
+                            {{ calculateTotal(destination) | currency: 'USD' }}
+                        </td> 
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="emptymessage">
                     <tr>
-                        <td colspan="5" class="text-center p-4 text-500">
-                            No hay destinos registrados en la calculadora.
+                        <td colspan="4" class="text-center p-8 text-muted-color">
+                            No hay destinos registrados.
                         </td>
                     </tr>
                 </ng-template>
@@ -73,12 +71,12 @@ interface Destino {
 })
 export class RecentSalesWidget implements OnInit, OnDestroy { 
     destinations: Destino[] = []; 
-    // Usamos la misma clave que definimos en la calculadora corregida anteriormente
-    private LS_KEY = 'viajes_v10_final';
+    // Usamos la llave actualizada de la calculadora maestra
+    private readonly LS_KEY = 'mis_destinos_data_v2';
 
     ngOnInit() {
         this.loadFromStorage();
-        // Escuchar cambios en localStorage desde otras partes de la app
+        // Escucha automática de cambios
         window.addEventListener('storage', () => this.loadFromStorage());
     }
 
@@ -87,30 +85,29 @@ export class RecentSalesWidget implements OnInit, OnDestroy {
     }
 
     loadFromStorage() {
-        const data = localStorage.getItem(this.LS_KEY);
-        if (data) {
-            this.destinations = JSON.parse(data);
-        } else {
-            this.destinations = [];
-        }
+        const data = localStorage.getItem(this.LS_KEY) ?? '[]';
+        this.destinations = JSON.parse(data);
     }
 
     calculateTotal(destino: Destino): number {
-        return (destino.gastos || []).reduce((acc, g) => acc + g.monto, 0);
+        return (destino.gastos || []).reduce((acc, g) => acc + (g.monto || 0), 0);
     }
 
     getStatus(destino: Destino): string {
         const total = this.calculateTotal(destino);
-        if (total === 0) return 'Sin Gastos';
-        return total > destino.presupuestoAsignado ? 'Excedido' : 'Ok';
+        if (total === 0) return 'PENDIENTE';
+        // En esta vista, comparamos contra el presupuesto asignado al destino específico
+        return total > (destino.presupuestoAsignado || 0) && destino.presupuestoAsignado > 0 ? 'EXCEDIDO' : 'DENTRO';
     }
 
     getBadgeClass(destino: Destino): string {
         const total = this.calculateTotal(destino);
-        const base = 'border-round p-1 text-xs font-bold ';
-        if (total === 0) return base + 'bg-gray-100 text-gray-600';
-        return total > destino.presupuestoAsignado 
-            ? base + 'bg-red-100 text-red-600' 
-            : base + 'bg-green-100 text-green-600';
+        const base = 'px-2 py-1 rounded-sm text-xs font-bold ';
+        
+        if (total === 0) return base + 'bg-surface-100 text-surface-600 dark:bg-surface-800';
+        
+        return total > (destino.presupuestoAsignado || 0) && destino.presupuestoAsignado > 0
+            ? base + 'bg-red-100 text-red-600 dark:bg-red-400/10' 
+            : base + 'bg-green-100 text-green-600 dark:bg-green-400/10';
     }
 }
