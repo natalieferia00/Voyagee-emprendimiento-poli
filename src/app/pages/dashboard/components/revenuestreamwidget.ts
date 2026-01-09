@@ -1,137 +1,82 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ChartModule } from 'primeng/chart';
-import { debounceTime, Subscription } from 'rxjs';
-import { LayoutService } from '../../../layout/service/layout.service';
-import { CommonModule } from '@angular/common'; // Agregado para compatibilidad Standalone
+import { CommonModule } from '@angular/common';
 
 @Component({
     standalone: true,
     selector: 'app-revenue-stream-widget',
     imports: [ChartModule, CommonModule],
-    template: `<div class="card mb-8!">
-        <!-- Título cambiado para reflejar el contenido de viajes -->
-        <div class="font-semibold text-xl mb-4">Volumen de Reservas por Trimestre</div>
-        <p-chart type="bar" [data]="chartData" [options]="chartOptions" class="h-100" />
+    template: `
+    <div class="card mb-0">
+        <div class="font-semibold text-xl mb-4">Gasto por Destino y Categoría</div>
+        <p-chart type="bar" [data]="chartData" [options]="chartOptions" class="h-80" />
     </div>`
 })
 export class RevenueStreamWidget implements OnInit, OnDestroy {
     chartData: any;
-
     chartOptions: any;
+    private LS_KEY = 'viajes_v10_final';
 
-    subscription!: Subscription;
-
-    constructor(public layoutService: LayoutService) {
-        this.subscription = this.layoutService.configUpdate$.pipe(debounceTime(25)).subscribe(() => {
-            this.initChart();
-        });
-    }
+    // Categorías actualizadas según tu imagen de la calculadora
+    private categorias = ['Comida', 'Transporte', 'Hospedaje', 'Vuelos', 'Otros'];
 
     ngOnInit() {
-        this.initChart();
+        this.updateChart();
+        // Escucha en tiempo real cuando guardas un gasto en el modal
+        window.addEventListener('storage', () => this.updateChart());
     }
 
-    initChart() {
+    updateChart() {
+        const data = localStorage.getItem(this.LS_KEY);
+        const destinos: any[] = data ? JSON.parse(data) : [];
+        const labels = destinos.map(d => d.nombre);
+        
         const documentStyle = getComputedStyle(document.documentElement);
-        const textColor = documentStyle.getPropertyValue('--text-color');
-        const borderColor = documentStyle.getPropertyValue('--surface-border');
-        const textMutedColor = documentStyle.getPropertyValue('--text-color-secondary');
+        
+        // Colores asignados a cada una de tus categorías
+        const colores = [
+            '#70dfa7ff', // Comida (Verde)
+            '#70dfa7ff', // Transporte (Amarillo/Naranja)
+            '#70dfa7ff', // Hospedaje (Rosa)
+            '#70dfa7ff', // Vuelos (Azul)
+            '#70dfa7ff'  // Otros (Gris)
+        ];
 
-        this.chartData = {
-            // Eje X: Se mantienen los trimestres
-            labels: ['Q1', 'Q2', 'Q3', 'Q4'],
-            datasets: [
-                {
-                    type: 'bar',
-                    // Información de Viajes: Vuelos
-                    label: 'Vuelos Reservados',
-                    backgroundColor: documentStyle.getPropertyValue('--p-primary-400'),
-                    // Datos de volumen (número de vuelos)
-                    data: [25, 40, 60, 30], 
-                    barThickness: 32
-                },
-                {
-                    type: 'bar',
-                    // Información de Viajes: Alojamiento
-                    label: 'Noches de Hotel Reservadas',
-                    backgroundColor: documentStyle.getPropertyValue('--p-primary-300'),
-                    // Datos de volumen (número de noches)
-                    data: [150, 200, 250, 180], 
-                    barThickness: 32
-                },
-                {
-                    type: 'bar',
-                    // Información de Viajes: Actividades
-                    label: 'Tours & Actividades',
-                    backgroundColor: documentStyle.getPropertyValue('--p-primary-200'),
-                    // Datos de volumen (número de actividades)
-                    data: [80, 110, 130, 95], 
-                    borderRadius: {
-                        topLeft: 8,
-                        topRight: 8,
-                        bottomLeft: 0,
-                        bottomRight: 0
-                    },
-                    borderSkipped: false,
-                    barThickness: 32
-                }
-            ]
-        };
+        const datasets = this.categorias.map((cat, i) => ({
+            type: 'bar',
+            label: cat,
+            backgroundColor: colores[i],
+            // Filtra y suma los montos de la categoría seleccionada en el modal
+            data: destinos.map(d => (d.gastos || [])
+                .filter((g: any) => g.categoria === cat)
+                .reduce((acc: number, g: any) => acc + (g.monto || 0), 0)),
+            stack: 'v1' // Apila Comida + Transporte + Hospedaje... en una sola barra
+        }));
 
+        this.chartData = { labels, datasets };
         this.chartOptions = {
             maintainAspectRatio: false,
-            aspectRatio: 0.8,
             plugins: {
-                legend: {
-                    labels: {
-                        color: textColor
+                tooltip: { 
+                    mode: 'index', 
+                    intersect: false,
+                    callbacks: {
+                        label: (c: any) => ` ${c.dataset.label}: $${c.parsed.y.toLocaleString()}`
                     }
                 },
-                // Ajuste de tooltip para reflejar "unidades" o "volumen"
-                tooltip: {
-                    callbacks: {
-                        label: function(context: any) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.parsed.y !== null) {
-                                label += context.parsed.y + ' unidades';
-                            }
-                            return label;
-                        }
-                    }
-                }
+                legend: { position: 'bottom' }
             },
             scales: {
-                x: {
-                    stacked: true,
-                    ticks: {
-                        color: textMutedColor
-                    },
-                    grid: {
-                        color: 'transparent',
-                        borderColor: 'transparent'
-                    }
-                },
-                y: {
-                    stacked: true,
-                    ticks: {
-                        color: textMutedColor
-                    },
-                    grid: {
-                        color: borderColor,
-                        borderColor: 'transparent',
-                        drawTicks: false
-                    }
+                x: { stacked: true },
+                y: { 
+                    stacked: true, 
+                    ticks: { callback: (v: any) => '$' + v.toLocaleString() } 
                 }
             }
         };
     }
 
     ngOnDestroy() {
-        if (this.subscription) {
-            this.subscription.unsubscribe();
-        }
+        window.removeEventListener('storage', () => this.updateChart());
     }
 }

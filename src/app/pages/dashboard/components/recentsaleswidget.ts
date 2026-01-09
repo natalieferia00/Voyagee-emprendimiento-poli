@@ -1,70 +1,116 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { RippleModule } from 'primeng/ripple';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 
-// Interfaz simple para los datos de destino
-interface Destination {
-    city: string;
-    country: string;
-    budget: number; // Costo estimado del viaje
-    date: string; // Fecha del viaje
+// Mantenemos la estructura de datos compatible con tu calculadora
+interface Gasto {
+    id: number;
+    categoria: string;
+    descripcion: string;
+    monto: number;
+}
+
+interface Destino {
+    id: number;
+    nombre: string;
+    presupuestoAsignado: number;
+    gastos: Gasto[];
 }
 
 @Component({
     standalone: true,
-    // Selector original, aunque el contenido es de destinos
     selector: 'app-recent-sales-widget', 
     imports: [CommonModule, TableModule, ButtonModule, RippleModule, CurrencyPipe], 
     template: `
-        <div class="card mb-8!">
-            <!-- Título que refleja el nuevo contenido de viajes -->
-            <div class="font-semibold text-xl mb-4"> Destinos Recientes</div>
+        <div class="card mb-0">
+            <div class="flex justify-content-between align-items-center mb-4">
+                <div class="font-semibold text-xl">Resumen de Destinos</div>
+                <p-button icon="pi pi-refresh" styleClass="p-button-text p-button-sm" (onClick)="loadFromStorage()"></p-button>
+            </div>
+            
             <p-table [value]="destinations" [paginator]="true" [rows]="5" responsiveLayout="scroll">
                 <ng-template pTemplate="header">
                     <tr>
-                        <!-- Icono -->
-                        <th>Mapa</th> 
-                        <th pSortableColumn="city">Ciudad <p-sortIcon field="city"></p-sortIcon></th>
-                        <th pSortableColumn="country">País <p-sortIcon field="country"></p-sortIcon></th>
-                        <th pSortableColumn="budget">Presupuesto <p-sortIcon field="budget"></p-sortIcon></th>
-                        <th>Ver</th>
+                        <th style="width: 4rem">Info</th> 
+                        <th pSortableColumn="nombre">Destino <p-sortIcon field="nombre"></p-sortIcon></th>
+                        <th pSortableColumn="presupuestoAsignado">Presupuesto <p-sortIcon field="presupuestoAsignado"></p-sortIcon></th>
+                        <th pSortableColumn="totalGastado">Gastado <p-sortIcon field="totalGastado"></p-sortIcon></th>
+                        <th>Estado</th>
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="body" let-destination>
                     <tr>
-                        <!-- Icono de mapa (pi pi-map-marker) -->
-                        <td style="width: 15%; min-width: 5rem;">
-                            <i class="pi pi-map-marker text-2xl text-primary"></i> 
+                        <td>
+                            <i class="pi pi-eye text-2xl text-blue-500"></i> 
                         </td>
-                        <!-- Datos de la Ciudad -->
-                        <td style="width: 35%; min-width: 7rem;">{{ destination.city }}</td> 
-                        <!-- Datos del País -->
-                        <td style="width: 35%; min-width: 7rem;">{{ destination.country }}</td>
-                        <!-- Presupuesto con formato de moneda -->
-                        <td style="width: 35%; min-width: 8rem;">{{ destination.budget | currency: 'USD' }}</td> 
+                        <td style="width: 35%; min-width: 7rem;">
+                            <span class="font-medium">{{ destination.nombre }}</span>
+                        </td> 
+                        <td style="width: 25%;">
+                            {{ destination.presupuestoAsignado | currency: 'USD' }}
+                        </td>
+                        <td style="width: 25%;" class="font-bold">
+                            {{ calculateTotal(destination) | currency: 'USD' }}
+                        </td> 
                         <td style="width: 15%;">
-                            <!-- Botón de Ver Detalles (Icono de ojo) -->
-                            <button pButton pRipple type="button" icon="pi pi-eye" class="p-button p-component p-button-text p-button-icon-only"></button>
+                            <span [class]="getBadgeClass(destination)">
+                                {{ getStatus(destination) }}
+                            </span>
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="5" class="text-center p-4 text-500">
+                            No hay destinos registrados en la calculadora.
                         </td>
                     </tr>
                 </ng-template>
             </p-table>
         </div>`,
-    providers: [] 
 })
-// Nombre de clase original
-export class RecentSalesWidget implements OnInit { 
-    destinations!: Destination[]; 
+export class RecentSalesWidget implements OnInit, OnDestroy { 
+    destinations: Destino[] = []; 
+    // Usamos la misma clave que definimos en la calculadora corregida anteriormente
+    private LS_KEY = 'viajes_v10_final';
 
     ngOnInit() {
-        this.destinations = [
-            { city: 'Tokio', country: 'Japón', budget: 3500, date: '2024-11-15' },
-            { city: 'Nueva York', country: 'EE. UU.', budget: 2800, date: '2024-10-20' },
-            { city: 'Roma', country: 'Italia', budget: 1900, date: '2024-09-01' },
-            { city: 'Cusco', country: 'Perú', budget: 1500, date: '2024-07-28' },
-            { city: 'Sídney', country: 'Australia', budget: 4200, date: '2024-06-10' }
-        ];
+        this.loadFromStorage();
+        // Escuchar cambios en localStorage desde otras partes de la app
+        window.addEventListener('storage', () => this.loadFromStorage());
+    }
+
+    ngOnDestroy() {
+        window.removeEventListener('storage', () => this.loadFromStorage());
+    }
+
+    loadFromStorage() {
+        const data = localStorage.getItem(this.LS_KEY);
+        if (data) {
+            this.destinations = JSON.parse(data);
+        } else {
+            this.destinations = [];
+        }
+    }
+
+    calculateTotal(destino: Destino): number {
+        return (destino.gastos || []).reduce((acc, g) => acc + g.monto, 0);
+    }
+
+    getStatus(destino: Destino): string {
+        const total = this.calculateTotal(destino);
+        if (total === 0) return 'Sin Gastos';
+        return total > destino.presupuestoAsignado ? 'Excedido' : 'Ok';
+    }
+
+    getBadgeClass(destino: Destino): string {
+        const total = this.calculateTotal(destino);
+        const base = 'border-round p-1 text-xs font-bold ';
+        if (total === 0) return base + 'bg-gray-100 text-gray-600';
+        return total > destino.presupuestoAsignado 
+            ? base + 'bg-red-100 text-red-600' 
+            : base + 'bg-green-100 text-green-600';
     }
 }
