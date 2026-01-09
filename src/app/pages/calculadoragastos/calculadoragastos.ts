@@ -1,10 +1,10 @@
-import { Component, OnInit, ChangeDetectionStrategy, inject, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MessageService, ConfirmationService } from 'primeng/api';
 
-/* PrimeNG Components */
-import { Table, TableModule } from 'primeng/table';
+/* PrimeNG */
+import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -13,272 +13,243 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TagModule } from 'primeng/tag';
 import { CardModule } from 'primeng/card';
-import { DividerModule } from 'primeng/divider';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
 
 interface Gasto {
-  id: number;
-  pais: string;
-  nombre: string;
-  descripcion: string;
-  monto: number;
+    id: number;
+    categoria: string;
+    descripcion: string;
+    monto: number;
+}
+
+interface Destino {
+    id: number;
+    nombre: string;
+    presupuestoAsignado: number;
+    gastos: Gasto[];
 }
 
 @Component({
-  selector: 'app-calculadora-gastos',
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    CurrencyPipe,
-    TableModule,
-    ButtonModule,
-    InputTextModule,
-    InputNumberModule,
-    DialogModule,
-    ToastModule,
-    ConfirmDialogModule,
-    TagModule,
-    CardModule,
-    DividerModule,
-    IconFieldModule,
-    InputIconModule
-  ],
-  providers: [MessageService, ConfirmationService],
-  template: `
+    selector: 'app-calculadora-gastos',
+    standalone: true,
+    imports: [
+        CommonModule, FormsModule, TableModule, ButtonModule, 
+        InputTextModule, InputNumberModule, DialogModule, 
+        ToastModule, ConfirmDialogModule, TagModule, CardModule
+    ],
+    providers: [MessageService, ConfirmationService, CurrencyPipe],
+    template: `
+        <p-toast></p-toast>
+        <p-confirmDialog [style]="{width: '450px'}"></p-confirmDialog>
 
-    <p-toast></p-toast>
-    <p-confirmDialog [style]="{width: '40vw'}" [baseZIndex]="10000"
-        acceptLabel="Sí, eliminar" rejectLabel="No"></p-confirmDialog>
+        <div class="p-5">
+            <p-card header=" Mi Presupuesto de Viaje">
+                <div class="flex mb-4 gap-2">
+                    <p-button label="Nuevo Destino" icon="pi pi-plus" (onClick)="showDestinoDialog()"></p-button>
+                </div>
 
-    <div class="p-5">
-      <p-card header="Calculadora de Gastos de Viaje" styleClass="shadow-2xl">
-        <ng-template pTemplate="subtitle">
-          Administra tus gastos de viaje por país.
-        </ng-template>
+                <p-table [value]="destinos" [rows]="10" styleClass="p-datatable-gridlines">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Destino</th>
+                            <th>Presupuesto</th>
+                            <th>Total Gastado</th>
+                            <th>Balance</th>
+                            <th style="width: 15rem">Acciones</th>
+                        </tr>
+                    </ng-template>
 
-        <!-- BARRA SUPERIOR ESTILO PRIME NG FILTERING -->
-        <div class="flex justify-content-between align-items-center mb-6">
-
-          <!-- Clear Filtros -->
-          <p-button 
-            label="Clear" 
-            icon="pi pi-filter-slash" 
-            styleClass="p-button-outlined p-button-success"
-            (onClick)="dt.clear()"
-             class="mr-220">>
-          </p-button>
-
-          <!-- Search -->
-          <span class="p-input-icon-left">
-            <input 
-              pInputText
-              #filterInput
-              type="text"
-              placeholder="Search keyword"
-              (input)="onGlobalFilter($event, dt)"
-              class="w-15rem"
-            />
-          </span>
+                    <ng-template pTemplate="body" let-destino>
+                        <tr>
+                            <td><span class="font-bold text-lg">{{ destino.nombre }}</span></td>
+                            <td>{{ destino.presupuestoAsignado | currency:'USD' }}</td>
+                            <td class="text-primary font-bold">{{ calcularTotalDestino(destino) | currency:'USD' }}</td>
+                            <td>
+                                <p-tag [severity]="getBadgeSeverity(destino)" 
+                                       [value]="(destino.presupuestoAsignado - calcularTotalDestino(destino) | currency:'USD') ?? ''">
+                                </p-tag>
+                            </td>
+                            <td>
+                                <div class="flex gap-2">
+                                    <p-button icon="pi pi-eye" pTooltip="Ver detalle" 
+                                              styleClass="p-button-rounded p-button-info p-button-text" 
+                                              (onClick)="verDetalle(destino)"></p-button>
+                                    
+                                    <p-button icon="pi pi-plus" label="Gasto" 
+                                              styleClass="p-button-rounded p-button-success p-button-sm" 
+                                              (onClick)="showGastoDialog(destino)"></p-button>
+                                              
+                                    <p-button icon="pi pi-trash" 
+                                              styleClass="p-button-rounded p-button-danger p-button-text" 
+                                              (onClick)="eliminarDestino(destino)"></p-button>
+                                </div>
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </p-card>
         </div>
 
-        <!-- TABLA PRINCIPAL -->
-        <p-table #dt
-          [value]="gastos"
-          dataKey="id"
-          [rows]="10"
-          [paginator]="true"
-          [rowHover]="true"
-          [globalFilterFields]="['pais', 'nombre', 'descripcion']"
-          responsiveLayout="scroll"
-          styleClass="p-datatable-sm shadow-2">
+        <p-dialog [header]="'Desglose de Gastos: ' + (destinoSeleccionado?.nombre ?? '')" 
+                  [(visible)]="displayDetalleDialog" 
+                  [modal]="true" 
+                  [style]="{width: '500px'}">
+            
+            <p-table [value]="destinoSeleccionado?.gastos ?? []" styleClass="p-datatable-sm">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>Categoría</th>
+                        <th>Descripción</th>
+                        <th class="text-right">Monto</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-gasto>
+                    <tr>
+                        <td><p-tag [value]="gasto.categoria" severity="secondary"></p-tag></td>
+                        <td>{{ gasto.descripcion }}</td>
+                        <td class="text-right font-bold">{{ gasto.monto | currency:'USD' }}</td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="footer">
+                    <tr>
+                        <td colspan="2" class="text-right font-bold">Total Acumulado:</td>
+                        <td class="text-right text-primary font-bold">
+                            {{ calcularTotalDestino(destinoSeleccionado!) | currency:'USD' }}
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="3" class="text-center p-4">No hay gastos registrados aún.</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </p-dialog>
 
-          <!-- HEADER -->
-          <ng-template pTemplate="header">
-            <tr>
-              <th pSortableColumn="pais">
-                Destino
-                <p-sortIcon field="pais"></p-sortIcon>
-                <p-columnFilter field="pais" type="text" display="menu"></p-columnFilter>
-              </th>
-
-              <th pSortableColumn="nombre">
-                Costo
-                <p-sortIcon field="nombre"></p-sortIcon>
-                <p-columnFilter field="nombre" type="text" display="menu"></p-columnFilter>
-              </th>
-
-              <th>
-                Descripción
-                <p-columnFilter field="descripcion" type="text" display="menu"></p-columnFilter>
-              </th>
-
-              <th pSortableColumn="monto">
-                Monto
-                <p-sortIcon field="monto"></p-sortIcon>
-                <p-columnFilter field="monto" type="numeric" display="menu"></p-columnFilter>
-              </th>
-
-              <th>Acciones</th>
-            </tr>
-          </ng-template>
-
-          <!-- BODY -->
-          <ng-template pTemplate="body" let-gasto>
-            <tr>
-              <td><p-tag [value]="gasto.pais" severity="info"></p-tag></td>
-              <td>{{ gasto.nombre }}</td>
-              <td>{{ gasto.descripcion }}</td>
-              <td class="font-bold text-right">
-                {{ gasto.monto | currency:'USD':'symbol':'1.2-2':'es-US' }}
-              </td>
-              <td class="text-center">
-                <p-button icon="pi pi-pencil"
-                          (onClick)="editarGasto(gasto)"
-                          styleClass="p-button-rounded p-button-warning p-button-text"></p-button>
-                <p-button icon="pi pi-trash"
-                          (onClick)="confirmarEliminarGasto(gasto)"
-                          styleClass="p-button-rounded p-button-danger p-button-text"></p-button>
-              </td>
-            </tr>
-          </ng-template>
-
-          <!-- EMPTY -->
-          <ng-template pTemplate="emptymessage">
-            <tr>
-              <td colspan="5" class="text-center p-4 text-gray-500">
-                No hay Costos registrados.
-              </td>
-            </tr>
-          </ng-template>
-
-          <!-- SUMMARY -->
-          <ng-template pTemplate="summary">
-            <div class="flex justify-content-end text-lg font-semibold">
-              Total: {{ totalGastos | currency:'USD':'symbol':'1.2-2':'es-US' }}
+        <p-dialog [header]="'Nuevo Gasto para ' + (destinoActual?.nombre ?? '')" [(visible)]="displayGastoDialog" [modal]="true" [style]="{width: '350px'}">
+            <div class="p-fluid">
+                <div class="field mb-3">
+                    <label class="font-bold">Categoría</label>
+                    <select class="p-inputtext w-full" [(ngModel)]="nuevoGasto.categoria">
+                        <option value="" disabled selected>Seleccione...</option>
+                        <option *ngFor="let cat of opcionesCategorias" [value]="cat.value">{{ cat.label }}</option>
+                    </select>
+                </div>
+                <div class="field mb-3">
+                    <label class="font-bold">Descripción</label>
+                    <input pInputText [(ngModel)]="nuevoGasto.descripcion" placeholder="Ej: Ticket de tren" />
+                </div>
+                <div class="field">
+                    <label class="font-bold">Monto</label>
+                    <p-inputNumber [(ngModel)]="nuevoGasto.monto" mode="currency" currency="USD"></p-inputNumber>
+                </div>
             </div>
-          </ng-template>
+            <ng-template pTemplate="footer">
+                <p-button label="Añadir" icon="pi pi-check" (onClick)="agregarGasto()"></p-button>
+            </ng-template>
+        </p-dialog>
 
-        </p-table>
-      </p-card>
-    </div>
-
-    <!-- DIALOG -->
-    <p-dialog 
-      header="{{ editando ? 'Editar Gasto' : 'Añadir Gasto' }}"
-      [(visible)]="displayDialog"
-      [modal]="true"
-      [style]="{width: '30vw'}"
-      [breakpoints]="{'960px': '75vw'}">
-
-      <div class="p-fluid">
-        <div class="field">
-          <label>Destino</label>
-          <input pInputText [(ngModel)]="nuevoGasto.pais" placeholder="Ej: Perú" required />
-        </div>
-        <div class="field">
-          <label>Costo</label>
-          <input pInputText [(ngModel)]="nuevoGasto.nombre" placeholder="Ej: Hotel Miramar" required />
-        </div>
-        <div class="field">
-          <label>Descripción</label>
-          <input pInputText [(ngModel)]="nuevoGasto.descripcion" placeholder="Ej: 3 noches con desayuno" required />
-        </div>
-        <div class="field">
-          <label>Monto (USD)</label>
-          <p-inputNumber [(ngModel)]="nuevoGasto.monto" mode="currency" currency="USD" locale="es-US" [min]="0"></p-inputNumber>
-        </div>
-      </div>
-
-      <ng-template pTemplate="footer">
-        <p-button label="Cancelar" icon="pi pi-times" (onClick)="displayDialog=false" styleClass="p-button-text"></p-button>
-        <p-button label="Guardar" icon="pi pi-check" (onClick)="guardarGasto()"></p-button>
-      </ng-template>
-
-    </p-dialog>
-  `,
-  changeDetection: ChangeDetectionStrategy.OnPush,
+        <p-dialog header="Nuevo Destino" [(visible)]="displayDestinoDialog" [modal]="true" [style]="{width: '350px'}">
+            <div class="p-fluid">
+                <div class="field mb-3"><label class="font-bold">Nombre del Lugar</label><input pInputText [(ngModel)]="nuevoDestino.nombre" /></div>
+                <div class="field"><label class="font-bold">Presupuesto Inicial</label><p-inputNumber [(ngModel)]="nuevoDestino.presupuestoAsignado" mode="currency" currency="USD"></p-inputNumber></div>
+            </div>
+            <ng-template pTemplate="footer"><p-button label="Guardar" icon="pi pi-check" (onClick)="agregarDestino()"></p-button></ng-template>
+        </p-dialog>
+    `,
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CalculadoraGastosComponent implements OnInit {
-  
-  private messageService = inject(MessageService);
-  private confirmationService = inject(ConfirmationService);
+    private confirmationService = inject(ConfirmationService);
+    private LS_KEY = 'viajes_v6_data';
 
-  @ViewChild('filterInput') filterInput!: ElementRef;
+    destinos: Destino[] = [];
+    destinoActual?: Destino;
+    destinoSeleccionado?: Destino; // Para el ojito
 
-  gastos: Gasto[] = [];
-  nuevoGasto: Gasto = this.resetGasto();
-  displayDialog = false;
-  editando = false;
-  totalGastos = 0;
-  nextId = 1;
+    displayDestinoDialog = false;
+    displayGastoDialog = false;
+    displayDetalleDialog = false; // Control del ojito
 
-  ngOnInit() {
-    this.gastos = [
-      { id: this.nextId++, pais: 'Perú', nombre: 'Hotel Miraflores', descripcion: '2 noches con desayuno', monto: 150 },
-      { id: this.nextId++, pais: 'Chile', nombre: 'Transporte Urbano', descripcion: 'Tarjeta bip y metro', monto: 30 },
-      { id: this.nextId++, pais: 'México', nombre: 'Comida Día 1', descripcion: 'Cena en restaurante local', monto: 25 }
+    opcionesCategorias = [
+        { label: ' Comida', value: 'Comida' },
+        { label: ' Transporte', value: 'Transporte' },
+        { label: ' Hospedaje', value: 'Hospedaje' },
+        { label: ' Vuelos', value: 'Vuelos' },
+        { label: ' Otros', value: 'Otros' }
     ];
-    this.calcularTotal();
-  }
 
-  onGlobalFilter(event: Event, table: Table) {
-    table.filterGlobal((event.target as HTMLInputElement).value, 'contains');
-  }
+    nuevoDestino: Destino = this.resetDestino();
+    nuevoGasto: Gasto = this.resetGasto();
 
-  resetGasto(): Gasto {
-    return { id: 0, pais: '', nombre: '', descripcion: '', monto: 0 };
-  }
+    ngOnInit() { this.cargarLocalStorage(); }
 
-  calcularTotal() {
-    this.totalGastos = this.gastos.reduce((acc, g) => acc + g.monto, 0);
-  }
-
-  showNewExpenseDialog() {
-    this.nuevoGasto = this.resetGasto();
-    this.displayDialog = true;
-    this.editando = false;
-  }
-
-  editarGasto(gasto: Gasto) {
-    this.nuevoGasto = { ...gasto };
-    this.displayDialog = true;
-    this.editando = true;
-  }
-
-  guardarGasto() {
-    if (!this.nuevoGasto.pais.trim() || !this.nuevoGasto.nombre.trim() || this.nuevoGasto.monto <= 0) {
-      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Completa todos los campos correctamente.' });
-      return;
+    // --- Lógica del "Ojito" ---
+    verDetalle(destino: Destino) {
+        this.destinoSeleccionado = destino;
+        this.displayDetalleDialog = true;
     }
 
-    if (this.editando) {
-      const index = this.gastos.findIndex(g => g.id === this.nuevoGasto.id);
-      if (index >= 0) this.gastos[index] = { ...this.nuevoGasto };
-      this.messageService.add({ severity: 'success', summary: 'Actualizado', detail: 'Gasto actualizado correctamente.' });
-    } else {
-      this.nuevoGasto.id = this.nextId++;
-      this.gastos = [...this.gastos, this.nuevoGasto];
-      this.messageService.add({ severity: 'success', summary: 'Añadido', detail: 'Gasto añadido correctamente.' });
+    // --- Persistencia ---
+    private guardarLocalStorage() { localStorage.setItem(this.LS_KEY, JSON.stringify(this.destinos)); }
+    private cargarLocalStorage() {
+        const stored = localStorage.getItem(this.LS_KEY);
+        if (stored) this.destinos = JSON.parse(stored);
     }
 
-    this.displayDialog = false;
-    this.calcularTotal();
-  }
+    // --- Acciones ---
+    showDestinoDialog() { this.nuevoDestino = this.resetDestino(); this.displayDestinoDialog = true; }
 
-  confirmarEliminarGasto(gasto: Gasto) {
-    this.confirmationService.confirm({
-      message: `¿Deseas eliminar el gasto "${gasto.nombre}" de ${gasto.pais}?`,
-      header: 'Confirmar eliminación',
-      icon: 'pi pi-exclamation-triangle',
-      accept: () => this.eliminarGasto(gasto.id)
-    });
-  }
+    agregarDestino() {
+        if (this.nuevoDestino.nombre.trim()) {
+            this.destinos = [...this.destinos, { ...this.nuevoDestino, id: Date.now(), gastos: [] }];
+            this.guardarLocalStorage();
+            this.displayDestinoDialog = false;
+        }
+    }
 
-  eliminarGasto(id: number) {
-    this.gastos = this.gastos.filter(g => g.id !== id);
-    this.calcularTotal();
-    this.messageService.add({ severity: 'info', summary: 'Eliminado', detail: 'Gasto eliminado correctamente.' });
-  }
+    eliminarDestino(destino: Destino) {
+        this.confirmationService.confirm({
+            message: `¿Estás seguro de eliminar ${destino.nombre}?`,
+            accept: () => {
+                this.destinos = this.destinos.filter(d => d.id !== destino.id);
+                this.guardarLocalStorage();
+            }
+        });
+    }
+
+    showGastoDialog(destino: Destino) {
+        this.destinoActual = destino;
+        this.nuevoGasto = this.resetGasto();
+        this.displayGastoDialog = true;
+    }
+
+    agregarGasto() {
+        if (this.destinoActual && this.nuevoGasto.monto > 0 && this.nuevoGasto.categoria) {
+            const index = this.destinos.findIndex(d => d.id === this.destinoActual?.id);
+            if (index !== -1) {
+                this.destinos[index].gastos = [...this.destinos[index].gastos, { ...this.nuevoGasto, id: Date.now() }];
+                this.destinos = [...this.destinos];
+                this.guardarLocalStorage();
+                this.displayGastoDialog = false;
+                
+                // Si el detalle estaba abierto, lo actualizamos
+                if (this.destinoSeleccionado?.id === this.destinoActual.id) {
+                    this.destinoSeleccionado = this.destinos[index];
+                }
+            }
+        }
+    }
+
+    calcularTotalDestino(destino: Destino): number {
+        if (!destino) return 0;
+        return (destino.gastos || []).reduce((acc: number, g: Gasto) => acc + g.monto, 0);
+    }
+
+    getBadgeSeverity(destino: Destino): "success" | "secondary" | "info" | "warn" | "danger" | "contrast" | undefined {
+        const resto = destino.presupuestoAsignado - this.calcularTotalDestino(destino);
+        return resto < 0 ? 'danger' : 'success';
+    }
+
+    private resetDestino(): Destino { return { id: 0, nombre: '', presupuestoAsignado: 0, gastos: [] }; }
+    private resetGasto(): Gasto { return { id: 0, categoria: '', descripcion: '', monto: 0 }; }
 }
