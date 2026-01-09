@@ -42,7 +42,7 @@ interface Destino {
         <p-confirmDialog></p-confirmDialog>
 
         <div class="p-4">
-            <p-card header="Presupuesto">
+            <p-card header="Gestión de Presupuesto Viajero">
                 <div class="flex mb-4">
                     <p-button label="Nuevo Destino" icon="pi pi-plus" (onClick)="showDestinoDialog()"></p-button>
                 </div>
@@ -79,39 +79,30 @@ interface Destino {
             </p-card>
         </div>
 
-        <p-dialog [header]="'Nuevo Gasto para ' + (destinoActual?.nombre ?? '')" [(visible)]="displayGastoDialog" 
-                  [modal]="true" [style]="{width: '350px'}" [draggable]="false">
+        <p-dialog [header]="'Nuevo Gasto para ' + (destinoActual?.nombre ?? '')" [(visible)]="displayGastoDialog" [modal]="true" [style]="{width: '350px'}">
             <div class="p-fluid">
                 <div class="field mb-3">
                     <label class="block font-bold mb-1">Categoría</label>
                     <select class="p-inputtext w-full" [(ngModel)]="nuevoGasto.categoria">
-                        <option value="" disabled selected>Seleccione...</option>
+                        <option value="" disabled>Seleccione...</option>
                         <option *ngFor="let cat of opcionesCategorias" [value]="cat.value">{{ cat.label }}</option>
                     </select>
                 </div>
-
-                <div class="field mb-3">
-                    <label class="block font-bold mb-1">Descripción</label>
-                    <input pInputText [(ngModel)]="nuevoGasto.descripcion" placeholder="¿En qué se gastó?" />
-                </div>
-
                 <div class="field mb-3">
                     <label class="block font-bold mb-1">Monto (USD)</label>
                     <p-inputNumber [(ngModel)]="nuevoGasto.monto" mode="currency" currency="USD" locale="en-US"></p-inputNumber>
                 </div>
             </div>
             <ng-template pTemplate="footer">
-                <p-button label="Cancelar" icon="pi pi-times" (onClick)="displayGastoDialog = false" styleClass="p-button-text p-button-secondary"></p-button>
                 <p-button label="Guardar" icon="pi pi-check" (onClick)="agregarGasto()"></p-button>
             </ng-template>
         </p-dialog>
 
-        <p-dialog header="Registrar Destino" [(visible)]="displayDestinoDialog" 
-                  [modal]="true" [style]="{width: '350px'}" [draggable]="false">
+        <p-dialog header="Registrar Destino" [(visible)]="displayDestinoDialog" [modal]="true" [style]="{width: '350px'}">
             <div class="p-fluid">
                 <div class="field mb-3">
-                    <label class="block font-bold mb-1">Nombre del Destino</label>
-                    <input pInputText [(ngModel)]="nuevoDestino.nombre" placeholder="Ej: Madrid" />
+                    <label class="block font-bold mb-1">Nombre</label>
+                    <input pInputText [(ngModel)]="nuevoDestino.nombre" />
                 </div>
                 <div class="field mb-3">
                     <label class="block font-bold mb-1">Presupuesto</label>
@@ -122,115 +113,92 @@ interface Destino {
                 <p-button label="Crear" icon="pi pi-check" (onClick)="agregarDestino()"></p-button>
             </ng-template>
         </p-dialog>
-
-        <p-dialog [header]="'Desglose: ' + (destinoSeleccionado?.nombre ?? '')" [(visible)]="displayDetalleDialog" [modal]="true" [style]="{width: '400px'}">
-            <p-table [value]="destinoSeleccionado?.gastos ?? []" styleClass="p-datatable-sm">
-                <ng-template pTemplate="header">
-                    <tr>
-                        <th>Cat.</th>
-                        <th>Detalle</th>
-                        <th class="text-right">Monto</th>
-                    </tr>
-                </ng-template>
-                <ng-template pTemplate="body" let-gasto>
-                    <tr>
-                        <td><p-tag [value]="gasto.categoria" severity="info"></p-tag></td>
-                        <td>{{ gasto.descripcion }}</td>
-                        <td class="text-right font-bold">{{ gasto.monto | currency:'USD' }}</td>
-                    </tr>
-                </ng-template>
-                <ng-template pTemplate="emptymessage">
-                    <tr>
-                        <td colspan="3" class="text-center p-3">No hay gastos.</td>
-                    </tr>
-                </ng-template>
-            </p-table>
-        </p-dialog>
     `,
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CalculadoraGastosComponent implements OnInit {
     private confirmationService = inject(ConfirmationService);
-    private LS_KEY = 'viajes_v10_final';
+    private LS_KEY_CALC = 'viajes_v10_final';
+    private LS_KEY_WIDGET = 'app_presupuesto_viaje';
 
     destinos: Destino[] = [];
     destinoActual?: Destino;
-    destinoSeleccionado?: Destino;
     displayDestinoDialog = false;
     displayGastoDialog = false;
-    displayDetalleDialog = false;
 
     opcionesCategorias = [
-        { label: 'Comida', value: 'Comida' },
-        { label: 'Transporte', value: 'Transporte' },
+        { label: 'Tiquetes', value: 'Vuelos' },
+        { label: 'Alimentación', value: 'Comida' },
         { label: 'Hospedaje', value: 'Hospedaje' },
-        { label: 'Vuelos', value: 'Vuelos' },
-        { label: 'Otros', value: 'Otros' }
+        { label: 'Seguros', value: 'Transporte' },
+        { label: 'Equipaje', value: 'Otros' }
     ];
 
-    nuevoDestino: Destino = this.resetDestino();
-    nuevoGasto: Gasto = this.resetGasto();
+    nuevoDestino: Destino = { id: 0, nombre: '', presupuestoAsignado: 0, gastos: [] };
+    nuevoGasto: Gasto = { id: 0, categoria: '', descripcion: '', monto: 0 };
 
-    ngOnInit() { this.cargarLocalStorage(); }
+    ngOnInit() { this.cargarDatos(); }
 
-    verDetalle(destino: Destino) {
-        this.destinoSeleccionado = destino;
-        this.displayDetalleDialog = true;
-    }
-
-    private guardarLocalStorage() { localStorage.setItem(this.LS_KEY, JSON.stringify(this.destinos)); }
-    private cargarLocalStorage() {
-        const stored = localStorage.getItem(this.LS_KEY);
+    private cargarDatos() {
+        const stored = localStorage.getItem(this.LS_KEY_CALC);
         if (stored) this.destinos = JSON.parse(stored);
     }
 
-    showDestinoDialog() { this.nuevoDestino = this.resetDestino(); this.displayDestinoDialog = true; }
+    private guardarTodo() {
+        localStorage.setItem(this.LS_KEY_CALC, JSON.stringify(this.destinos));
+        this.sincronizarWidget();
+    }
+
+    private sincronizarWidget() {
+        const categoriasMapa = [
+            { nombre: 'Tiquetes', subtitulo: 'tiquetes de viaje', color: 'bg-orange-500', slug: 'Vuelos' },
+            { nombre: 'Alimentacion', subtitulo: 'plan de comidas', color: 'bg-cyan-500', slug: 'Comida' },
+            { nombre: 'Hospedaje', subtitulo: 'Hoteles, hostales, etc', color: 'bg-pink-500', slug: 'Hospedaje' },
+            { nombre: 'Seguros', subtitulo: 'seguros de viaje', color: 'bg-green-500', slug: 'Transporte' },
+            { nombre: 'Equipaje', subtitulo: 'checklist equipaje', color: 'bg-purple-500', slug: 'Otros' }
+        ];
+
+        const presupuestoTotal = this.destinos.reduce((acc, d) => acc + d.presupuestoAsignado, 0);
+        const presupuestoPorCat = presupuestoTotal / categoriasMapa.length;
+
+        const dataWidget = categoriasMapa.map(cat => {
+            const gastado = this.destinos.reduce((acc, d) => {
+                const sub = d.gastos.filter(g => g.categoria === cat.slug).reduce((s, g) => s + g.monto, 0);
+                return acc + sub;
+            }, 0);
+            return {
+                ...cat,
+                gastado: gastado,
+                total: presupuestoPorCat || 100
+            };
+        });
+
+        localStorage.setItem(this.LS_KEY_WIDGET, JSON.stringify(dataWidget));
+        window.dispatchEvent(new Event('storage'));
+    }
 
     agregarDestino() {
-        if (this.nuevoDestino.nombre.trim()) {
+        if (this.nuevoDestino.nombre) {
             this.destinos = [...this.destinos, { ...this.nuevoDestino, id: Date.now(), gastos: [] }];
-            this.guardarLocalStorage();
+            this.guardarTodo();
             this.displayDestinoDialog = false;
         }
     }
 
-    eliminarDestino(destino: Destino) {
-        this.confirmationService.confirm({
-            message: `¿Eliminar viaje a ${destino.nombre}?`,
-            accept: () => {
-                this.destinos = this.destinos.filter(d => d.id !== destino.id);
-                this.guardarLocalStorage();
-            }
-        });
-    }
-
-    showGastoDialog(destino: Destino) {
-        this.destinoActual = destino;
-        this.nuevoGasto = this.resetGasto();
-        this.displayGastoDialog = true;
-    }
-
     agregarGasto() {
-        if (this.destinoActual && this.nuevoGasto.monto > 0 && this.nuevoGasto.categoria) {
-            const index = this.destinos.findIndex(d => d.id === this.destinoActual?.id);
-            if (index !== -1) {
-                this.destinos[index].gastos = [...this.destinos[index].gastos, { ...this.nuevoGasto, id: Date.now() }];
-                this.destinos = [...this.destinos];
-                this.guardarLocalStorage();
-                this.displayGastoDialog = false;
-            }
+        if (this.destinoActual && this.nuevoGasto.monto > 0) {
+            this.destinoActual.gastos.push({ ...this.nuevoGasto, id: Date.now() });
+            this.destinos = [...this.destinos];
+            this.guardarTodo();
+            this.displayGastoDialog = false;
         }
     }
 
-    calcularTotalDestino(destino: Destino): number {
-        return (destino.gastos || []).reduce((acc: number, g: Gasto) => acc + g.monto, 0);
-    }
-
-    getBadgeSeverity(destino: Destino): "success" | "secondary" | "info" | "warn" | "danger" | "contrast" | undefined {
-        const resto = destino.presupuestoAsignado - this.calcularTotalDestino(destino);
-        return resto < 0 ? 'danger' : 'success';
-    }
-
-    private resetDestino(): Destino { return { id: 0, nombre: '', presupuestoAsignado: 0, gastos: [] }; }
-    private resetGasto(): Gasto { return { id: 0, categoria: '', descripcion: '', monto: 0 }; }
+    // Funciones auxiliares
+    calcularTotalDestino(d: Destino) { return d.gastos.reduce((acc, g) => acc + g.monto, 0); }
+    getBadgeSeverity(d: Destino) { return (d.presupuestoAsignado - this.calcularTotalDestino(d)) < 0 ? 'danger' : 'success'; }
+    showDestinoDialog() { this.nuevoDestino = { id: 0, nombre: '', presupuestoAsignado: 0, gastos: [] }; this.displayDestinoDialog = true; }
+    showGastoDialog(d: Destino) { this.destinoActual = d; this.nuevoGasto = { id: 0, categoria: '', descripcion: '', monto: 0 }; this.displayGastoDialog = true; }
+    eliminarDestino(d: Destino) { this.confirmationService.confirm({ message: '¿Eliminar?', accept: () => { this.destinos = this.destinos.filter(x => x.id !== d.id); this.guardarTodo(); } }); }
+    verDetalle(d: any) { /* Implementar si se desea */ }
 }

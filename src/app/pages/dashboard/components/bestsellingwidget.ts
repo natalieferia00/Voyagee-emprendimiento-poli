@@ -1,13 +1,22 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { MenuModule } from 'primeng/menu';
+
+interface PresupuestoCategoria {
+    nombre: string;
+    subtitulo: string;
+    color: string;
+    gastado: number;
+    total: number;
+}
 
 @Component({
     standalone: true,
     selector: 'app-best-selling-widget',
     imports: [CommonModule, ButtonModule, MenuModule],
-    template: ` <div class="card">
+    template: `
+    <div class="card">
         <div class="flex justify-between items-center mb-6">
             <div class="font-semibold text-xl">Avance del viaje</div>
             <div>
@@ -15,87 +24,70 @@ import { MenuModule } from 'primeng/menu';
                 <p-menu #menu [popup]="true" [model]="items"></p-menu>
             </div>
         </div>
+        
         <ul class="list-none p-0 m-0">
-            <li class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+            <li *ngFor="let cat of categorias" class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
                 <div>
-                    <span class="text-surface-900 dark:text-surface-0 font-medium mr-2 mb-1 md:mb-0">Tiquetes</span>
-                    <div class="mt-1 text-muted-color">tiquetes de viaje</div>
+                    <span class="text-surface-900 dark:text-surface-0 font-medium mr-2 mb-1 md:mb-0">{{ cat.nombre }}</span>
+                    <div class="mt-1 text-muted-color">{{ cat.subtitulo }}</div>
                 </div>
                 <div class="mt-2 md:mt-0 flex items-center">
                     <div class="bg-surface-300 dark:bg-surface-500 rounded-border overflow-hidden w-40 lg:w-24" style="height: 8px">
-                        <div class="bg-orange-500 h-full" style="width: 50%"></div>
+                        <div [class]="'h-full ' + cat.color" [style.width]="getPorcentaje(cat) + '%'"></div>
                     </div>
-                    <span class="text-orange-500 ml-4 font-medium">%50</span>
-                </div>
-            </li>
-            <li class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                <div>
-                    <span class="text-surface-900 dark:text-surface-0 font-medium mr-2 mb-1 md:mb-0">Alimentacion</span>
-                    <div class="mt-1 text-muted-color">plan de comidas</div>
-                </div>
-                <div class="mt-2 md:mt-0 ml-0 md:ml-20 flex items-center">
-                    <div class="bg-surface-300 dark:bg-surface-500 rounded-border overflow-hidden w-40 lg:w-24" style="height: 8px">
-                        <div class="bg-cyan-500 h-full" style="width: 16%"></div>
-                    </div>
-                    <span class="text-cyan-500 ml-4 font-medium">%16</span>
-                </div>
-            </li>
-            <li class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                <div>
-                    <span class="text-surface-900 dark:text-surface-0 font-medium mr-2 mb-1 md:mb-0">Hospedaje</span>
-                    <div class="mt-1 text-muted-color">Hoteles, hostales, etc</div>
-                </div>
-                <div class="mt-2 md:mt-0 ml-0 md:ml-20 flex items-center">
-                    <div class="bg-surface-300 dark:bg-surface-500 rounded-border overflow-hidden w-40 lg:w-24" style="height: 8px">
-                        <div class="bg-pink-500 h-full" style="width: 67%"></div>
-                    </div>
-                    <span class="text-pink-500 ml-4 font-medium">%67</span>
-                </div>
-            </li>
-            <li class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                <div>
-                    <span class="text-surface-900 dark:text-surface-0 font-medium mr-2 mb-1 md:mb-0">Seguros</span>
-                    <div class="mt-1 text-muted-color">seguros de viaje</div>
-                </div>
-                <div class="mt-2 md:mt-0 ml-0 md:ml-20 flex items-center">
-                    <div class="bg-surface-300 dark:bg-surface-500 rounded-border overflow-hidden w-40 lg:w-24" style="height: 8px">
-                        <div class="bg-green-500 h-full" style="width: 35%"></div>
-                    </div>
-                    <span class="text-primary ml-4 font-medium">%35</span>
-                </div>
-            </li>
-            <li class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                <div>
-                    <span class="text-surface-900 dark:text-surface-0 font-medium mr-2 mb-1 md:mb-0">Equipaje</span>
-                    <div class="mt-1 text-muted-color">checklist esquipaje</div>
-                </div>
-                <div class="mt-2 md:mt-0 ml-0 md:ml-20 flex items-center">
-                    <div class="bg-surface-300 dark:bg-surface-500 rounded-border overflow-hidden w-40 lg:w-24" style="height: 8px">
-                        <div class="bg-purple-500 h-full" style="width: 75%"></div>
-                    </div>
-                    <span class="text-purple-500 ml-4 font-medium">%75</span>
-                </div>
-            </li>
-            <li class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                <div>
-                    <span class="text-surface-900 dark:text-surface-0 font-medium mr-2 mb-1 md:mb-0">Otros</span>
-                    <div class="mt-1 text-muted-color">Otros</div>
-                </div>
-                <div class="mt-2 md:mt-0 ml-0 md:ml-20 flex items-center">
-                    <div class="bg-surface-300 dark:bg-surface-500 rounded-border overflow-hidden w-40 lg:w-24" style="height: 8px">
-                        <div class="bg-teal-500 h-full" style="width: 40%"></div>
-                    </div>
-                    <span class="text-teal-500 ml-4 font-medium">%40</span>
+                    <span [class]="'ml-4 font-medium ' + getTextColor(cat.color)">
+                        %{{ getPorcentaje(cat) }}
+                    </span>
                 </div>
             </li>
         </ul>
     </div>`
 })
-export class BestSellingWidget {
-    menu = null;
+export class BestSellingWidget implements OnInit, OnDestroy {
+    private readonly LS_KEY_PRESUPUESTO = 'app_presupuesto_viaje';
+    categorias: PresupuestoCategoria[] = [];
 
     items = [
-        { label: 'Add New', icon: 'pi pi-fw pi-plus' },
-        { label: 'Remove', icon: 'pi pi-fw pi-trash' }
+        { label: 'Actualizar', icon: 'pi pi-fw pi-refresh', command: () => this.cargarPresupuestos() }
     ];
+
+    ngOnInit() {
+        this.cargarPresupuestos();
+        // Escucha cambios desde la calculadora
+        window.addEventListener('storage', this.onStorageChange.bind(this));
+    }
+
+    private onStorageChange() {
+        this.cargarPresupuestos();
+    }
+
+    cargarPresupuestos() {
+        const data = localStorage.getItem(this.LS_KEY_PRESUPUESTO);
+        if (data) {
+            this.categorias = JSON.parse(data);
+        } else {
+            // Datos iniciales por defecto
+            this.categorias = [
+                { nombre: 'Tiquetes', subtitulo: 'tiquetes de viaje', color: 'bg-orange-500', gastado: 0, total: 100 },
+                { nombre: 'Alimentacion', subtitulo: 'plan de comidas', color: 'bg-cyan-500', gastado: 0, total: 100 },
+                { nombre: 'Hospedaje', subtitulo: 'Hoteles, hostales, etc', color: 'bg-pink-500', gastado: 0, total: 100 },
+                { nombre: 'Seguros', subtitulo: 'seguros de viaje', color: 'bg-green-500', gastado: 0, total: 100 },
+                { nombre: 'Equipaje', subtitulo: 'checklist equipaje', color: 'bg-purple-500', gastado: 0, total: 100 }
+            ];
+        }
+    }
+
+    getPorcentaje(cat: PresupuestoCategoria): number {
+        if (!cat.total || cat.total === 0) return 0;
+        const porc = Math.round((cat.gastado / cat.total) * 100);
+        return porc > 100 ? 100 : porc;
+    }
+
+    getTextColor(bgColor: string): string {
+        return bgColor.replace('bg-', 'text-');
+    }
+
+    ngOnDestroy() {
+        window.removeEventListener('storage', this.onStorageChange.bind(this));
+    }
 }
