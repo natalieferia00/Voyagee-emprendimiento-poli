@@ -5,7 +5,7 @@
     <div class="flex justify-between items-center mb-4">
         <div class="font-semibold text-xl text-800">Gestión de Transporte</div>
         <p-tag severity="contrast" 
-               [style]="{'font-size': '1.1rem', 'padding': '8px 15px'}" 
+               [ngStyle]="{'font-size': '1.1rem', 'padding': '8px 15px'}" 
                [value]="'Inversión Transporte: ' + (calcularTotal() | currency:'USD':'symbol':'1.0-2')">
         </p-tag>
     </div>
@@ -48,9 +48,9 @@
                 </td>
                 <td class="text-center">
                     <i *ngIf="viaje.descripcion" 
-                       class="pi pi-eye text-primary cursor-pointer text-xl" 
-                       [pTooltip]="viaje.descripcion" 
-                       tooltipPosition="top">
+                        class="pi pi-eye text-primary cursor-pointer text-xl" 
+                        [pTooltip]="viaje.descripcion" 
+                        tooltipPosition="top">
                     </i>
                     <i *ngIf="!viaje.descripcion" class="pi pi-eye-slash text-300 text-xl"></i>
                 </td>
@@ -60,11 +60,11 @@
                         [options]="estados" 
                         optionLabel="label" 
                         optionValue="value"
-                        (onChange)="onStatusChange(viaje, $event.value)"
+                        (onChange)="onStatusChange(viaje)"
                         appendTo="body"
                         styleClass="w-full border-none shadow-none bg-transparent">
                         <ng-template #selectedItem let-selectedOption>
-                            <p-tag [value]="selectedOption.label.toUpperCase()" [severity]="getSeverity(selectedOption.value)"></p-tag>
+                            <p-tag *ngIf="selectedOption" [value]="selectedOption.label.toUpperCase()" [severity]="getSeverity(selectedOption.value)"></p-tag>
                         </ng-template>
                         <ng-template let-option #item>
                             <p-tag [value]="option.label.toUpperCase()" [severity]="getSeverity(option.value)"></p-tag>
@@ -82,67 +82,53 @@
     </p-table>
 </div>
 
-<p-dialog 
-    [(visible)]="viajeDialog" 
-    [style]="{ width: '550px' }" 
-    header="Detalles del Transporte" 
-    [modal]="true" 
-    styleClass="p-fluid">
-    
+<p-dialog header="Vincular a Calculadora" [(visible)]="destinosDialog" [modal]="true" [style]="{width: '350px'}">
+    <div class="flex flex-col gap-4">
+        <p class="text-sm">Has marcado este viaje como <b>Reservado</b>. ¿A qué destino quieres sumar este gasto?</p>
+        <p-select [options]="listaDestinos" [(ngModel)]="destinoSeleccionado" optionLabel="nombre" placeholder="Selecciona destino" styleClass="w-full" appendTo="body"></p-select>
+        <p-button label="Confirmar Gasto" icon="pi pi-check" (onClick)="confirmarVinculacion()" [disabled]="!destinoSeleccionado"></p-button>
+    </div>
+</p-dialog>
+
+<p-dialog [(visible)]="viajeDialog" [style]="{ width: '550px' }" header="Detalles del Transporte" [modal]="true" styleClass="p-fluid">
     <ng-template pTemplate="content">
         <div class="flex flex-col gap-5 pt-2">
-            
             <div class="grid grid-cols-2 gap-4">
                 <div class="flex flex-col gap-2">
                     <label class="font-bold text-700">Origen</label>
-                    <input type="text" pInputText [(ngModel)]="viaje.origen" placeholder="Ciudad de inicio" />
+                    <input type="text" pInputText [(ngModel)]="viaje.origen" />
                 </div>
                 <div class="flex flex-col gap-2">
                     <label class="font-bold text-700">Destino</label>
-                    <input type="text" pInputText [(ngModel)]="viaje.destino" placeholder="Ciudad de fin" />
+                    <input type="text" pInputText [(ngModel)]="viaje.destino" />
                 </div>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
                 <div class="flex flex-col gap-2">
-                    <label class="font-bold text-700">Medio de Transporte</label>
-                    <p-select [options]="mediosTransporte" [(ngModel)]="viaje.medioTransporte" optionLabel="label" optionValue="value" placeholder="Seleccionar"></p-select>
+                    <label class="font-bold text-700">Medio</label>
+                    <p-select [options]="mediosTransporte" [(ngModel)]="viaje.medioTransporte" optionLabel="label" optionValue="value"></p-select>
                 </div>
                 <div class="flex flex-col gap-2">
                     <label class="font-bold text-700">Costo (USD)</label>
-                    <p-inputNumber [(ngModel)]="viaje.costo" mode="currency" currency="USD" locale="en-US" placeholder="0.00"></p-inputNumber>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-                <div class="flex flex-col gap-2">
-                    <label class="font-bold text-700">Estado</label>
-                    <p-select [options]="estados" [(ngModel)]="viaje.estado" optionLabel="label" optionValue="value">
-                        <ng-template #selectedItem let-selectedOption>
-                            <p-tag *ngIf="selectedOption" [value]="selectedOption.label.toUpperCase()" [severity]="getSeverity(selectedOption.value)"></p-tag>
-                        </ng-template>
-                    </p-select>
-                </div>
-                <div class="flex flex-col gap-2">
-                    <label class="font-bold text-700">URL Proveedor</label>
-                    <div class="p-inputgroup">
-                        <span class="p-inputgroup-addon"><i class="pi pi-link"></i></span>
-                        <input type="text" pInputText [(ngModel)]="viaje.urlProveedor" placeholder="https://..." />
-                    </div>
+                    <p-inputNumber [(ngModel)]="viaje.costo" mode="currency" currency="USD" locale="en-US"></p-inputNumber>
                 </div>
             </div>
 
             <div class="flex flex-col gap-2">
-                <label class="font-bold text-700">Descripción (Horarios, Direcciones, Notas)</label>
-                <textarea pTextarea [(ngModel)]="viaje.descripcion" rows="4" placeholder="Indica horarios, terminales o notas importantes..." style="resize: none"></textarea>
+                <label class="font-bold text-700">URL Proveedor</label>
+                <input type="text" pInputText [(ngModel)]="viaje.urlProveedor" />
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <label class="font-bold text-700">Descripción</label>
+                <textarea pTextarea [(ngModel)]="viaje.descripcion" rows="4"></textarea>
             </div>
         </div>
     </ng-template>
 
     <ng-template pTemplate="footer">
-        <div class="flex justify-end gap-2 mt-2">
-            <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary" (onClick)="viajeDialog = false"></p-button>
-            <p-button label="Guardar Viaje" icon="pi pi-check" severity="success" [raised]="true" (onClick)="saveViaje()"></p-button>
-        </div>
+        <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary" (onClick)="viajeDialog = false"></p-button>
+        <p-button label="Guardar" icon="pi pi-check" (onClick)="saveViaje()"></p-button>
     </ng-template>
-</p-dialog>
+</p-dialog> 

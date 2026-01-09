@@ -1,5 +1,5 @@
-import { Component, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, signal, HostListener, inject } from '@angular/core';
+import { CommonModule, CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 // PrimeNG
@@ -26,6 +26,8 @@ interface GastoAlimentacion {
     description?: string;
     url?: string;
     estado?: string;
+    registradoEnCalculadora?: boolean;
+    refGastoId?: number;
 }
 
 @Component({
@@ -36,6 +38,7 @@ interface GastoAlimentacion {
         InputTextModule, ButtonModule, ToolbarModule, DialogModule,
         SelectModule, InputNumberModule, TextareaModule, ConfirmDialogModule, ToastModule
     ],
+    providers: [ConfirmationService, MessageService, CurrencyPipe],
     template: `
     <p-toast />
     <p-confirmdialog />
@@ -79,12 +82,11 @@ interface GastoAlimentacion {
                     <td class="font-semibold text-primary">
                         {{ gasto.costoEstimado | currency:'COP':'symbol':'1.0-0' }}
                     </td>
-                    
                     <td>
                         <p-select 
                             [(ngModel)]="gasto.estado" 
                             [options]="estados" 
-                            (onChange)="onStatusChange(gasto, $event.value)"
+                            (onChange)="onStatusChange(gasto)"
                             styleClass="w-full border-none bg-transparent shadow-none"
                             appendTo="body">
                             <ng-template #selectedItem let-selectedOption>
@@ -95,9 +97,7 @@ interface GastoAlimentacion {
                             </ng-template>
                         </p-select>
                     </td>
-
-                    <td><p-rating [(ngModel)]="gasto.rating" [readonly]="true" /></td>
-                    
+                    <td><p-rating [ngModel]="gasto.rating" [readonly]="true" /></td>
                     <td>
                         <div class="flex gap-2">
                             <p-button icon="pi pi-pencil" [rounded]="true" [outlined]="true" severity="info" (onClick)="editGasto(gasto)" />
@@ -111,10 +111,9 @@ interface GastoAlimentacion {
         <p-dialog [(visible)]="gastoDialog" [style]="{ width: '550px' }" header="Detalles del Gasto" [modal]="true" styleClass="p-fluid">
             <ng-template #content>
                 <div class="flex flex-col gap-5 pt-2">
-                    
                     <div class="flex flex-col gap-2">
                         <label class="font-bold text-900">Lugar o Concepto</label>
-                        <input type="text" pInputText [(ngModel)]="gasto.nombre" placeholder="Ej: Supermercado, Restaurante, Snacks..." autofocus />
+                        <input type="text" pInputText [(ngModel)]="gasto.nombre" placeholder="Ej: Supermercado..." autofocus />
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
@@ -151,7 +150,7 @@ interface GastoAlimentacion {
 
                     <div class="flex flex-col gap-2">
                         <label class="font-bold text-900">Notas Adicionales</label>
-                        <textarea pTextarea [(ngModel)]="gasto.description" rows="4" style="resize: none" placeholder="Detalles sobre platos, horarios o recomendaciones..."></textarea>
+                        <textarea pTextarea [(ngModel)]="gasto.description" rows="4" style="resize: none" placeholder="Detalles..."></textarea>
                     </div>
                 </div>
             </ng-template>
@@ -163,15 +162,33 @@ interface GastoAlimentacion {
                 </div>
             </ng-template>
         </p-dialog>
+
+        <p-dialog header="Vincular a Presupuesto" [(visible)]="destinosDialog" [modal]="true" [style]="{width: '400px'}">
+            <div class="p-2">
+                <p class="mb-4">Selecciona el destino para asignar este gasto de alimentación:</p>
+                <p-select [options]="listaDestinos" [(ngModel)]="destinoSeleccionado" optionLabel="nombre" placeholder="Seleccionar destino" styleClass="w-full" appendTo="body" />
+                <div class="flex justify-end mt-4">
+                    <p-button label="Confirmar" (onClick)="confirmarVinculacion()" [disabled]="!destinoSeleccionado" />
+                </div>
+            </div>
+        </p-dialog>
     </div>
-    `,
-    providers: [ConfirmationService, MessageService]
+    `
 })
 export class GestionAlimentacionComponent implements OnInit {
-
     gastos = signal<GastoAlimentacion[]>([]);
     gasto: GastoAlimentacion = {};
     gastoDialog: boolean = false;
+    destinosDialog: boolean = false;
+    listaDestinos: any[] = [];
+    destinoSeleccionado: any = null;
+    gastoPendiente: GastoAlimentacion | null = null;
+
+    private readonly LS_ALIMENTACION = 'mis_gastos_alimentacion_v1';
+    private readonly LS_CALC = 'mis_destinos_data_v2';
+
+    private messageService = inject(MessageService);
+    private confirmationService = inject(ConfirmationService);
 
     categorias = ['Restaurante', 'Supermercado', 'Panadería', 'Calle / Snack', 'Otros'];
     
@@ -182,17 +199,74 @@ export class GestionAlimentacionComponent implements OnInit {
         { label: 'Descartado', value: 'Descartado' }
     ];
 
-    constructor(
-        private messageService: MessageService,
-        private confirmationService: ConfirmationService
-    ) {}
+    @HostListener('window:storage')
+    onExternalUpdate() { this.loadFromLocal(); }
 
-    ngOnInit() {
-        this.gastos.set([
-            { id: 1, nombre: 'Supermercado Éxito', categoria: 'Supermercado', costoEstimado: 120000, estado: 'Pendiente' },
-            { id: 2, nombre: 'Restaurante El Cielo', categoria: 'Restaurante', costoEstimado: 250000, estado: 'Reservado', rating: 5 },
-            { id: 3, nombre: 'Panadería Tradicional', categoria: 'Panadería', costoEstimado: 20000, estado: 'Visto' }
-        ]);
+    ngOnInit() { this.loadFromLocal(); }
+
+    loadFromLocal() {
+        const saved = localStorage.getItem(this.LS_ALIMENTACION);
+        if (saved) {
+            this.gastos.set(JSON.parse(saved));
+        }
+    }
+
+    saveToLocal() {
+        localStorage.setItem(this.LS_ALIMENTACION, JSON.stringify(this.gastos()));
+    }
+
+    onStatusChange(g: GastoAlimentacion) {
+        if (g.estado === 'Reservado' && !g.registradoEnCalculadora) {
+            this.abrirVinculacion(g);
+        } else if (g.estado !== 'Reservado' && g.registradoEnCalculadora) {
+            this.eliminarDeCalculadora(g);
+        }
+        this.saveToLocal();
+    }
+
+    abrirVinculacion(g: GastoAlimentacion) {
+        const data = localStorage.getItem(this.LS_CALC);
+        this.listaDestinos = data ? JSON.parse(data) : [];
+        if (this.listaDestinos.length === 0) return;
+        this.gastoPendiente = g;
+        this.destinosDialog = true;
+    }
+
+    confirmarVinculacion() {
+        if (!this.gastoPendiente || !this.destinoSeleccionado) return;
+        const dataCalc = JSON.parse(localStorage.getItem(this.LS_CALC) || '[]');
+        const idx = dataCalc.findIndex((d: any) => d.id === this.destinoSeleccionado.id);
+        
+        if (idx !== -1) {
+            const gastoId = Date.now();
+            if (!dataCalc[idx].gastos) dataCalc[idx].gastos = [];
+            dataCalc[idx].gastos.push({
+                id: gastoId,
+                categoria: 'Alimentación',
+                descripcion: `Alim: ${this.gastoPendiente.nombre}`,
+                monto: this.gastoPendiente.costoEstimado || 0
+            });
+            localStorage.setItem(this.LS_CALC, JSON.stringify(dataCalc));
+            window.dispatchEvent(new Event('storage'));
+            
+            this.gastoPendiente.registradoEnCalculadora = true;
+            this.gastoPendiente.refGastoId = gastoId;
+            this.saveToLocal();
+            this.messageService.add({ severity: 'success', summary: 'Sincronizado', detail: 'Añadido al presupuesto' });
+        }
+        this.destinosDialog = false;
+    }
+
+    eliminarDeCalculadora(g: GastoAlimentacion) {
+        if (!g.refGastoId) return;
+        const dataCalc = JSON.parse(localStorage.getItem(this.LS_CALC) || '[]');
+        dataCalc.forEach((dest: any) => {
+            if (dest.gastos) dest.gastos = dest.gastos.filter((gas: any) => gas.id !== g.refGastoId);
+        });
+        localStorage.setItem(this.LS_CALC, JSON.stringify(dataCalc));
+        window.dispatchEvent(new Event('storage'));
+        g.registradoEnCalculadora = false;
+        g.refGastoId = undefined;
     }
 
     calcularTotal() {
@@ -209,10 +283,6 @@ export class GestionAlimentacionComponent implements OnInit {
         this.gastoDialog = true;
     }
 
-    onStatusChange(g: GastoAlimentacion, nuevoEstado: string) {
-        this.messageService.add({ severity: 'info', summary: 'Actualizado', detail: `${g.nombre} -> ${nuevoEstado}` });
-    }
-
     saveGasto() {
         if (this.gasto.nombre?.trim()) {
             let _gastos = [...this.gastos()];
@@ -220,11 +290,13 @@ export class GestionAlimentacionComponent implements OnInit {
                 const index = _gastos.findIndex(r => r.id === this.gasto.id);
                 _gastos[index] = this.gasto;
             } else {
-                this.gasto.id = Math.floor(Math.random() * 1000);
+                this.gasto.id = Math.floor(Math.random() * 100000);
                 _gastos.push(this.gasto);
             }
             this.gastos.set(_gastos);
+            this.saveToLocal();
             this.gastoDialog = false;
+            if (this.gasto.estado === 'Reservado') this.onStatusChange(this.gasto);
             this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Registro guardado' });
         }
     }
@@ -232,10 +304,10 @@ export class GestionAlimentacionComponent implements OnInit {
     deleteGasto(g: GastoAlimentacion) {
         this.confirmationService.confirm({
             message: `¿Eliminar ${g.nombre}?`,
-            header: 'Confirmar eliminación',
-            icon: 'pi pi-exclamation-triangle',
             accept: () => {
+                this.eliminarDeCalculadora(g);
                 this.gastos.set(this.gastos().filter((val) => val.id !== g.id));
+                this.saveToLocal();
                 this.messageService.add({ severity: 'success', summary: 'Eliminado', detail: 'Registro borrado' });
             }
         });
@@ -243,23 +315,13 @@ export class GestionAlimentacionComponent implements OnInit {
 
     hideDialog() { this.gastoDialog = false; }
 
-    getSeverityStatus(status: string): 'success' | 'warn' | 'danger' | 'info' | 'secondary' {
-        switch (status) {
-            case 'Reservado': return 'success';
-            case 'Pendiente': return 'warn';
-            case 'Visto': return 'info';
-            case 'Descartado': return 'danger';
-            default: return 'secondary';
-        }
+    getSeverityStatus(status: any): any {
+        const map: any = { 'Reservado': 'success', 'Pendiente': 'warn', 'Visto': 'info', 'Descartado': 'danger' };
+        return map[status] || 'secondary';
     }
 
-    getSeverityCategoria(cat: string) {
-        switch (cat) {
-            case 'Restaurante': return 'info';
-            case 'Supermercado': return 'success';
-            case 'Panadería': return 'secondary';
-            case 'Calle / Snack': return 'warn';
-            default: return 'secondary';
-        }
+    getSeverityCategoria(cat: any): any {
+        const map: any = { 'Restaurante': 'info', 'Supermercado': 'success', 'Panadería': 'secondary', 'Calle / Snack': 'warn' };
+        return map[cat] || 'secondary';
     }
 }

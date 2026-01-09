@@ -54,16 +54,7 @@ export class AppMenu implements OnInit {
                     { label: 'Notificaciones', icon: 'pi pi-fw pi-bell', routerLink: ['/crear-notificaciones'] }
                 ]
             },
-            {
-                label: 'Componentes UI',
-                items: [
-                    { label: 'Form Layout', icon: 'pi pi-fw pi-id-card', routerLink: ['/uikit/formlayout'] },
-                    { label: 'Input', icon: 'pi pi-fw pi-check-square', routerLink: ['/uikit/input'] },
-                    { label: 'Table', icon: 'pi pi-fw pi-table', routerLink: ['/uikit/table'] },
-                    { label: 'Chart', icon: 'pi pi-fw pi-chart-bar', routerLink: ['/uikit/charts'] },
-                    { label: 'Timeline', icon: 'pi pi-fw pi-calendar', routerLink: ['/uikit/timeline'] }
-                ]
-            },
+         
             {
                 label: 'Auth',
                 icon: 'pi pi-fw pi-user',

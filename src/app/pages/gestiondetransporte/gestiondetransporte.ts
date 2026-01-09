@@ -1,7 +1,7 @@
-import { Component, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, OnInit, signal, HostListener, inject } from '@angular/core';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import { Table, TableModule } from 'primeng/table';
-import { CommonModule } from '@angular/common';
+import { TableModule } from 'primeng/table';
+import { CommonModule, CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
@@ -17,6 +17,9 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { TooltipModule } from 'primeng/tooltip';
 
+// 1. Definimos el tipo exacto que espera PrimeNG
+type SeverityType = "success" | "secondary" | "info" | "warn" | "danger" | "contrast" | undefined;
+
 interface Viaje {
     id?: string;
     origen?: string;
@@ -26,6 +29,8 @@ interface Viaje {
     costo?: number;
     urlProveedor?: string;
     descripcion?: string;
+    registradoEnCalculadora?: boolean;
+    refGastoId?: number;
 }
 
 @Component({
@@ -37,14 +42,31 @@ interface Viaje {
         DialogModule, TagModule, InputIconModule, IconFieldModule, 
         ConfirmDialogModule, InputNumberModule, TooltipModule
     ],
-    templateUrl: './gestiondetransporte.html',
-    providers: [MessageService, ConfirmationService]
+    providers: [MessageService, ConfirmationService, CurrencyPipe],
+    templateUrl: './gestiondetransporte.html'
 })
 export class Gestiondetransporte implements OnInit {
     viajeDialog: boolean = false;
     viajes = signal<Viaje[]>([]);
     viaje: Viaje = {};
     submitted: boolean = false;
+
+    // Vinculación
+    destinosDialog: boolean = false;
+    listaDestinos: any[] = [];
+    destinoSeleccionado: any = null;
+    viajePendiente: Viaje | null = null;
+
+    private readonly LS_CALC = 'mis_destinos_data_v2';
+    private readonly LS_TRANS = 'mis_transporte_data_v1';
+
+    private messageService = inject(MessageService);
+    private confirmationService = inject(ConfirmationService);
+
+    @HostListener('window:storage')
+    onExternalUpdate() {
+        this.loadViajes();
+    }
 
     mediosTransporte = [
         { label: 'Aéreo', value: 'Aéreo' },
@@ -59,37 +81,19 @@ export class Gestiondetransporte implements OnInit {
         { label: 'Cancelado', value: 'cancelado' }
     ];
 
-    constructor(private messageService: MessageService, private confirmationService: ConfirmationService) {}
-
     ngOnInit() {
-        this.viajes.set([
-            { 
-                id: '1', 
-                origen: 'Medellín', 
-                destino: 'Madrid', 
-                medioTransporte: 'Aéreo', 
-                estado: 'visto', 
-                costo: 850, 
-                urlProveedor: 'https://avianca.com', 
-                descripcion: 'Vuelo directo con maleta incluida' 
-            }
-        ]);
+        this.loadViajes();
     }
 
-  
-    calcularTotal() {
-        return this.viajes().reduce((acc, v) => acc + (v.costo || 0), 0);
+    loadViajes() {
+        const saved = localStorage.getItem(this.LS_TRANS);
+        if (saved) {
+            this.viajes.set(JSON.parse(saved));
+        }
     }
 
-    onStatusChange(viaje: Viaje, nuevoEstado: string) {
-        this.messageService.add({ 
-            severity: 'info', 
-            summary: 'Estado Actualizado', 
-            detail: `Viaje a ${viaje.destino} ahora está ${nuevoEstado}` 
-        });
-    }
-
-    getSeverity(status: string): "success" | "secondary" | "info" | "warn" | "danger" | any {
+    // 2. Corregimos la función para que devuelva el tipo estricto SeverityType
+    getSeverity(status: string | undefined): SeverityType {
         switch (status) {
             case 'reservado': return 'success';
             case 'visto': return 'info';
@@ -99,27 +103,62 @@ export class Gestiondetransporte implements OnInit {
         }
     }
 
-    openNew() {
-        this.viaje = { estado: 'pendiente' };
-        this.submitted = false;
-        this.viajeDialog = true;
+    onStatusChange(viaje: Viaje) {
+        if (viaje.estado === 'reservado' && !viaje.registradoEnCalculadora) {
+            this.abrirVinculacion(viaje);
+        } else if (viaje.estado !== 'reservado' && viaje.registradoEnCalculadora) {
+            this.eliminarGastoDeCalculadora(viaje);
+        }
+        this.saveToLocal();
     }
 
-    editViaje(viaje: Viaje) {
-        this.viaje = { ...viaje };
-        this.viajeDialog = true;
+    abrirVinculacion(viaje: Viaje) {
+        const data = localStorage.getItem(this.LS_CALC);
+        this.listaDestinos = data ? JSON.parse(data) : [];
+        if (this.listaDestinos.length === 0) {
+            this.messageService.add({ severity: 'warn', summary: 'Atención', detail: 'Crea un destino en la calculadora primero' });
+            return;
+        }
+        this.viajePendiente = viaje;
+        this.destinosDialog = true;
     }
 
-    deleteViaje(viaje: Viaje) {
-        this.confirmationService.confirm({
-            message: `¿Estás seguro de eliminar el viaje a ${viaje.destino}?`,
-            header: 'Confirmar eliminación',
-            icon: 'pi pi-exclamation-triangle',
-            accept: () => {
-                this.viajes.set(this.viajes().filter((val) => val.id !== viaje.id));
-                this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Viaje Eliminado' });
+    confirmarVinculacion() {
+        if (!this.viajePendiente || !this.destinoSeleccionado) return;
+        const dataCalculadora = JSON.parse(localStorage.getItem(this.LS_CALC) || '[]');
+        const index = dataCalculadora.findIndex((d: any) => d.id === this.destinoSeleccionado.id);
+        
+        if (index !== -1) {
+            const gastoId = Date.now();
+            const nuevoGasto = {
+                id: gastoId,
+                categoria: 'Otros',
+                descripcion: `Transporte: ${this.viajePendiente.medioTransporte} (${this.viajePendiente.origen}-${this.viajePendiente.destino})`,
+                monto: this.viajePendiente.costo || 0
+            };
+            if (!dataCalculadora[index].gastos) dataCalculadora[index].gastos = [];
+            dataCalculadora[index].gastos.push(nuevoGasto);
+            localStorage.setItem(this.LS_CALC, JSON.stringify(dataCalculadora));
+            window.dispatchEvent(new Event('storage'));
+            this.viajePendiente.registradoEnCalculadora = true;
+            this.viajePendiente.refGastoId = gastoId;
+            this.saveToLocal();
+        }
+        this.destinosDialog = false;
+    }
+
+    eliminarGastoDeCalculadora(viaje: Viaje) {
+        if (!viaje.refGastoId) return;
+        const dataCalc = JSON.parse(localStorage.getItem(this.LS_CALC) || '[]');
+        dataCalc.forEach((destino: any) => {
+            if (destino.gastos) {
+                destino.gastos = destino.gastos.filter((g: any) => g.id !== viaje.refGastoId);
             }
         });
+        localStorage.setItem(this.LS_CALC, JSON.stringify(dataCalc));
+        window.dispatchEvent(new Event('storage'));
+        viaje.registradoEnCalculadora = false;
+        viaje.refGastoId = undefined;
     }
 
     saveViaje() {
@@ -134,9 +173,40 @@ export class Gestiondetransporte implements OnInit {
                 _viajes.push(this.viaje);
             }
             this.viajes.set(_viajes);
+            this.saveToLocal();
             this.viajeDialog = false;
             this.viaje = {};
-            this.messageService.add({ severity: 'success', summary: 'Operación Exitosa', detail: 'Los datos se han guardado.' });
+            this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Viaje Guardado' });
         }
+    }
+
+    deleteViaje(viaje: Viaje) {
+        this.confirmationService.confirm({
+            message: `¿Estás seguro de eliminar el viaje a ${viaje.destino}?`,
+            accept: () => {
+                this.eliminarGastoDeCalculadora(viaje);
+                this.viajes.set(this.viajes().filter((val) => val.id !== viaje.id));
+                this.saveToLocal();
+            }
+        });
+    }
+
+    saveToLocal() {
+        localStorage.setItem(this.LS_TRANS, JSON.stringify(this.viajes()));
+    }
+
+    calcularTotal() {
+        return this.viajes().reduce((acc, v) => acc + (v.costo || 0), 0);
+    }
+
+    openNew() {
+        this.viaje = { estado: 'pendiente' };
+        this.submitted = false;
+        this.viajeDialog = true;
+    }
+
+    editViaje(viaje: Viaje) {
+        this.viaje = { ...viaje };
+        this.viajeDialog = true;
     }
 }

@@ -1,5 +1,5 @@
-import { Component, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, signal, HostListener, inject } from '@angular/core';
+import { CommonModule, CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 // PrimeNG
@@ -29,6 +29,8 @@ interface Tour {
     descripcion?: string | null;
     valoracion?: number | null;
     fecha?: Date | null;
+    registradoEnCalculadora?: boolean;
+    refGastoId?: number;
 }
 
 @Component({
@@ -40,7 +42,7 @@ interface Tour {
         SelectModule, InputNumberModule, TextareaModule, ConfirmDialogModule, 
         ToastModule, DatePickerModule, TooltipModule
     ],
-    providers: [ConfirmationService, MessageService],
+    providers: [ConfirmationService, MessageService, CurrencyPipe],
     template: `
     <p-toast />
     <p-confirmdialog />
@@ -83,12 +85,11 @@ interface Tour {
                     <td class="font-semibold text-primary">
                         {{ tour.precio | currency:'COP':'symbol':'1.0-0' }}
                     </td>
-                    
                     <td>
                         <p-select 
                             [(ngModel)]="tour.estado" 
                             [options]="estados" 
-                            (onChange)="onStatusChange(tour, $event.value)"
+                            (onChange)="onStatusChange(tour)"
                             styleClass="w-full border-none bg-transparent shadow-none"
                             appendTo="body">
                             <ng-template #selectedItem let-selectedOption>
@@ -99,9 +100,7 @@ interface Tour {
                             </ng-template>
                         </p-select>
                     </td>
-
                     <td><p-rating [ngModel]="tour.valoracion" [readonly]="true" /></td>
-                    
                     <td>
                         <div class="flex gap-2">
                             <p-button icon="pi pi-pencil" [rounded]="true" [outlined]="true" severity="info" (onClick)="editTour(tour)" />
@@ -115,7 +114,6 @@ interface Tour {
         <p-dialog [(visible)]="tourDialog" [style]="{ width: '550px' }" header="Detalles de la Actividad" [modal]="true" styleClass="p-fluid">
             <ng-template #content>
                 <div class="flex flex-col gap-5 pt-2">
-                    
                     <div class="flex flex-col gap-2">
                         <label class="font-bold text-900">Nombre de la Actividad</label>
                         <input type="text" pInputText [(ngModel)]="tour.nombre" placeholder="Ej: Tour Islas del Rosario..." autofocus />
@@ -159,6 +157,16 @@ interface Tour {
                 </div>
             </ng-template>
         </p-dialog>
+
+        <p-dialog header="Vincular a Presupuesto" [(visible)]="destinosDialog" [modal]="true" [style]="{width: '400px'}">
+            <div class="p-2">
+                <p class="mb-4">¿A qué destino quieres asignar este gasto reservado?</p>
+                <p-select [options]="listaDestinos" [(ngModel)]="destinoSeleccionado" optionLabel="nombre" placeholder="Seleccionar destino" styleClass="w-full" appendTo="body" />
+                <div class="flex justify-end mt-4">
+                    <p-button label="Confirmar" (onClick)="confirmarVinculacion()" [disabled]="!destinoSeleccionado" />
+                </div>
+            </div>
+        </p-dialog>
     </div>
     `
 })
@@ -166,6 +174,16 @@ export class ActividadesyExcursionesComponent implements OnInit {
     tours = signal<Tour[]>([]);
     tour: Tour = {};
     tourDialog: boolean = false;
+    destinosDialog: boolean = false;
+    listaDestinos: any[] = [];
+    destinoSeleccionado: any = null;
+    tourPendiente: Tour | null = null;
+
+    private readonly LS_KEY = 'mis_tours_data_v1';
+    private readonly LS_CALC_KEY = 'mis_destinos_data_v2';
+
+    private messageService = inject(MessageService);
+    private confirmationService = inject(ConfirmationService);
 
     estados = [
         { label: 'Visto', value: 'Visto' },
@@ -174,35 +192,79 @@ export class ActividadesyExcursionesComponent implements OnInit {
         { label: 'Descartado', value: 'Descartado' }
     ];
 
-    constructor(
-        private messageService: MessageService,
-        private confirmationService: ConfirmationService
-    ) {}
+    @HostListener('window:storage')
+    onExternalUpdate() { this.loadFromLocal(); }
 
-    ngOnInit() {
-        this.tours.set([
-            { id: 1, nombre: 'City Tour Cartagena', destino: 'Cartagena', precio: 80000, estado: 'Reservado', valoracion: 4, fecha: new Date() },
-            { id: 2, nombre: 'Entrada Castillo San Felipe', destino: 'Cartagena', precio: 35000, estado: 'Pendiente', valoracion: 5, fecha: new Date() }
-        ]);
+    ngOnInit() { this.loadFromLocal(); }
+
+    loadFromLocal() {
+        const saved = localStorage.getItem(this.LS_KEY);
+        if (saved) {
+            const data = JSON.parse(saved);
+            this.tours.set(data.map((t: any) => ({ ...t, fecha: t.fecha ? new Date(t.fecha) : null })));
+        }
     }
 
-    calcularTotal() {
-        return this.tours().reduce((acc, t) => acc + (t.precio || 0), 0);
+    saveToLocal() { localStorage.setItem(this.LS_KEY, JSON.stringify(this.tours())); }
+
+    onStatusChange(t: Tour) {
+        if (t.estado === 'Reservado' && !t.registradoEnCalculadora) {
+            this.abrirVinculacion(t);
+        } else if (t.estado !== 'Reservado' && t.registradoEnCalculadora) {
+            this.eliminarDeCalculadora(t);
+        }
+        this.saveToLocal();
     }
 
-    openNew() {
-        this.tour = { valoracion: 0, estado: 'Visto', precio: 0, fecha: new Date() };
-        this.tourDialog = true;
+    abrirVinculacion(t: Tour) {
+        const data = localStorage.getItem(this.LS_CALC_KEY);
+        this.listaDestinos = data ? JSON.parse(data) : [];
+        if (this.listaDestinos.length === 0) return;
+        this.tourPendiente = t;
+        this.destinosDialog = true;
     }
 
-    editTour(t: Tour) {
-        this.tour = { ...t };
-        this.tourDialog = true;
+    confirmarVinculacion() {
+        if (!this.tourPendiente || !this.destinoSeleccionado) return;
+        const dataCalc = JSON.parse(localStorage.getItem(this.LS_CALC_KEY) || '[]');
+        const idx = dataCalc.findIndex((d: any) => d.id === this.destinoSeleccionado.id);
+        
+        if (idx !== -1) {
+            const gastoId = Date.now();
+            if (!dataCalc[idx].gastos) dataCalc[idx].gastos = [];
+            dataCalc[idx].gastos.push({
+                id: gastoId,
+                categoria: 'Otros',
+                descripcion: `Actividad: ${this.tourPendiente.nombre}`,
+                monto: this.tourPendiente.precio || 0
+            });
+            localStorage.setItem(this.LS_CALC_KEY, JSON.stringify(dataCalc));
+            window.dispatchEvent(new Event('storage'));
+            
+            this.tourPendiente.registradoEnCalculadora = true;
+            this.tourPendiente.refGastoId = gastoId;
+            this.saveToLocal();
+            this.messageService.add({ severity: 'success', summary: 'Sincronizado', detail: 'Añadido al presupuesto' });
+        }
+        this.destinosDialog = false;
     }
 
-    onStatusChange(t: Tour, nuevoEstado: string) {
-        this.messageService.add({ severity: 'info', summary: 'Actualizado', detail: `${t.nombre} -> ${nuevoEstado}` });
+    eliminarDeCalculadora(t: Tour) {
+        if (!t.refGastoId) return;
+        const dataCalc = JSON.parse(localStorage.getItem(this.LS_CALC_KEY) || '[]');
+        dataCalc.forEach((dest: any) => {
+            if (dest.gastos) dest.gastos = dest.gastos.filter((g: any) => g.id !== t.refGastoId);
+        });
+        localStorage.setItem(this.LS_CALC_KEY, JSON.stringify(dataCalc));
+        window.dispatchEvent(new Event('storage'));
+        t.registradoEnCalculadora = false;
+        t.refGastoId = undefined;
     }
+
+    calcularTotal() { return this.tours().reduce((acc, t) => acc + (t.precio || 0), 0); }
+    openNew() { this.tour = { valoracion: 0, estado: 'Visto', precio: 0, fecha: new Date() }; this.tourDialog = true; }
+    editTour(t: Tour) { this.tour = { ...t }; this.tourDialog = true; }
+    hideDialog() { this.tourDialog = false; }
 
     saveTour() {
         if (this.tour.nombre?.trim()) {
@@ -211,36 +273,29 @@ export class ActividadesyExcursionesComponent implements OnInit {
                 const index = _tours.findIndex(r => r.id === this.tour.id);
                 _tours[index] = this.tour;
             } else {
-                this.tour.id = Math.floor(Math.random() * 1000);
+                this.tour.id = Math.floor(Math.random() * 100000);
                 _tours.push(this.tour);
             }
             this.tours.set(_tours);
+            this.saveToLocal();
             this.tourDialog = false;
-            this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Actividad guardada' });
+            if (this.tour.estado === 'Reservado') this.onStatusChange(this.tour);
         }
     }
 
     deleteTour(t: Tour) {
         this.confirmationService.confirm({
             message: `¿Eliminar la actividad ${t.nombre}?`,
-            header: 'Confirmar eliminación',
-            icon: 'pi pi-exclamation-triangle',
             accept: () => {
+                this.eliminarDeCalculadora(t);
                 this.tours.set(this.tours().filter((val) => val.id !== t.id));
-                this.messageService.add({ severity: 'success', summary: 'Eliminado', detail: 'Registro borrado' });
+                this.saveToLocal();
             }
         });
     }
 
-    hideDialog() { this.tourDialog = false; }
-
-    getSeverityStatus(status: string | null | undefined): 'success' | 'warn' | 'danger' | 'info' | 'secondary' {
-        switch (status) {
-            case 'Reservado': return 'success';
-            case 'Pendiente': return 'warn';
-            case 'Visto': return 'info';
-            case 'Descartado': return 'danger';
-            default: return 'secondary';
-        }
+    getSeverityStatus(status: any): any {
+        const map: any = { 'Reservado': 'success', 'Pendiente': 'warn', 'Visto': 'info', 'Descartado': 'danger' };
+        return map[status] || 'secondary';
     }
 }

@@ -1,8 +1,10 @@
-import { Component, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, OnInit, signal, HostListener, inject } from '@angular/core';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import { Table, TableModule } from 'primeng/table';
-import { CommonModule } from '@angular/common';
+import { CommonModule, CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+
+/* PrimeNG Full Stack */
+import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { RippleModule } from 'primeng/ripple';
 import { ToastModule } from 'primeng/toast';
@@ -13,14 +15,11 @@ import { SelectModule } from 'primeng/select';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { DialogModule } from 'primeng/dialog';
 import { TagModule } from 'primeng/tag';
-import { InputIconModule } from 'primeng/inputicon';
-import { IconFieldModule } from 'primeng/iconfield';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { ProgressBarModule } from 'primeng/progressbar';
-import { DatePickerModule } from 'primeng/datepicker';
-import { ToggleSwitchModule } from 'primeng/toggleswitch';
-import { CheckboxModule } from 'primeng/checkbox';
 import { TooltipModule } from 'primeng/tooltip';
+import { CheckboxModule } from 'primeng/checkbox';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { DatePickerModule } from 'primeng/datepicker';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
 interface Flight {
   id?: number;
@@ -37,19 +36,20 @@ interface Flight {
   status?: string;
   description?: string;
   url?: string;
+  registradoEnCalculadora?: boolean;
+  refGastoId?: number; // Referencia única para borrar en la calculadora
 }
 
 @Component({
-  selector: 'app-gestion-vuelos',
+  selector: 'app-empty',
   standalone: true,
   imports: [
     CommonModule, FormsModule, TableModule, TagModule, InputTextModule, 
     ButtonModule, RippleModule, ToastModule, ToolbarModule, SelectModule, 
-    InputNumberModule, DialogModule, InputIconModule, IconFieldModule, 
-    ConfirmDialogModule, ProgressBarModule, TextareaModule, DatePickerModule,
-    ToggleSwitchModule, CheckboxModule, TooltipModule
+    InputNumberModule, DialogModule, ConfirmDialogModule, TextareaModule, 
+    DatePickerModule, ToggleSwitchModule, CheckboxModule, TooltipModule
   ],
-  providers: [ConfirmationService, MessageService],
+  providers: [ConfirmationService, MessageService, CurrencyPipe],
   template: `
     <p-toast />
     <p-confirmdialog />
@@ -63,22 +63,20 @@ interface Flight {
 
       <p-toolbar styleClass="mb-6">
         <ng-template #start>
-          <p-button label="Nuevo Vuelo" icon="pi pi-plus" severity="success" class="mr-2" (onClick)="openNew()" />
+          <p-button label="Nuevo Vuelo" icon="pi pi-plus" severity="success" (onClick)="openNew()" />
         </ng-template>
       </p-toolbar>
 
-      <p-table #dt [value]="flights()" [rows]="10" [paginator]="true" [rowHover]="true" dataKey="id">
+      <p-table [value]="flights()" [rows]="10" [paginator]="true" [rowHover]="true" responsiveLayout="scroll">
         <ng-template #header>
           <tr>
             <th>Vuelo / Aerolínea</th>
-            <th>Reserva</th>
             <th>Ruta</th>
-            <th style="max-width: 150px">Descripción</th> 
             <th>Escalas</th>
             <th class="text-center">Equipaje</th>
             <th>Fecha</th>
             <th>Precio</th>
-            <th style="min-width: 14rem">Estado</th>
+            <th style="min-width: 12rem">Estado</th>
             <th class="text-center">Link</th>
             <th>Acciones</th>
           </tr>
@@ -87,21 +85,10 @@ interface Flight {
         <ng-template #body let-flight>
           <tr>
             <td>
-              <div class="font-bold">{{ flight.flightNumber }}</div>
+              <div class="font-bold">{{ flight.flightNumber || 'S/N' }}</div>
               <div class="text-xs text-secondary">{{ flight.airline }}</div>
             </td>
-            <td><p-tag *ngIf="flight.bookingCode" [value]="flight.bookingCode" severity="secondary" /></td>
             <td>{{ flight.origin }} <i class="pi pi-arrow-right text-xs"></i> {{ flight.destination }}</td>
-            
-            <td>
-              <div class="text-xs text-overflow-ellipsis overflow-hidden whitespace-nowrap" 
-                   style="max-width: 140px; cursor: help;" 
-                   [pTooltip]="flight.description" 
-                   tooltipPosition="top">
-                {{ flight.description || '---' }}
-              </div>
-            </td>
-
             <td>
               <p-tag *ngIf="flight.hasLayovers" [value]="flight.layoverCount + ' Escalas'" severity="warn" />
               <span *ngIf="!flight.hasLayovers" class="text-xs text-green-500 font-medium">Directo</span>
@@ -111,30 +98,24 @@ interface Flight {
             </td>
             <td>{{ flight.date | date: 'dd/MM/yyyy' }}</td>
             <td class="font-semibold text-primary">{{ flight.price | currency: 'USD' }}</td>
-            
             <td>
               <p-select 
                 [(ngModel)]="flight.status" 
                 [options]="statuses" 
                 optionLabel="label" 
                 optionValue="label"
-                styleClass="w-full border-none shadow-none bg-transparent"
-                appendTo="body">
+                (onChange)="onStatusChange(flight)"
+                styleClass="w-full border-none shadow-none bg-transparent">
                 <ng-template #selectedItem let-selectedOption>
                   <p-tag [value]="selectedOption.label" [severity]="getSeverity(selectedOption.label)" />
                 </ng-template>
-                <ng-template let-option #item>
-                  <p-tag [value]="option.label" [severity]="getSeverity(option.label)" />
-                </ng-template>
               </p-select>
             </td>
-
             <td class="text-center">
-              <a *ngIf="flight.url" [href]="flight.url" target="_blank" class="p-button p-button-rounded p-button-text p-button-info">
+              <a *ngIf="flight.url" [href]="flight.url" target="_blank" class="text-blue-500">
                 <i class="pi pi-external-link"></i>
               </a>
             </td>
-
             <td>
               <div class="flex gap-2">
                 <p-button icon="pi pi-pencil" [rounded]="true" [outlined]="true" (onClick)="editFlight(flight)" />
@@ -145,85 +126,87 @@ interface Flight {
         </ng-template>
       </p-table>
 
+      <p-dialog header="Vincular a Calculadora" [(visible)]="destinosDialog" [modal]="true" [style]="{width: '350px'}">
+        <div class="flex flex-col gap-4">
+            <p class="text-sm">Has marcado este vuelo como <b>Reservado</b>. ¿A qué destino quieres sumarlo como gasto?</p>
+            <p-select [options]="listaDestinos" [(ngModel)]="destinoSeleccionado" optionLabel="nombre" placeholder="Selecciona destino" styleClass="w-full" appendTo="body"></p-select>
+            <p-button label="Confirmar Gasto" icon="pi pi-check" (onClick)="confirmarVinculacion()" [disabled]="!destinoSeleccionado"></p-button>
+        </div>
+      </p-dialog>
+
       <p-dialog [(visible)]="flightDialog" [style]="{ width: '550px' }" header="Detalles del Vuelo" [modal]="true" styleClass="p-fluid">
-        <ng-template #content>
-          <div class="flex flex-col gap-5 mt-2">
-            
-            <div class="grid grid-cols-2 gap-4">
-              <div class="flex flex-col gap-2">
-                <label class="font-bold text-800">Aerolínea</label>
-                <input pInputText [(ngModel)]="flight.airline" placeholder="Ej: Avianca" />
-              </div>
-              <div class="flex flex-col gap-2">
-                <label class="font-bold text-800">Nº de Vuelo</label>
-                <input pInputText [(ngModel)]="flight.flightNumber" placeholder="Ej: AV123" />
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-              <div class="flex flex-col gap-2">
-                <label class="font-bold text-800">Código de Reserva</label>
-                <input pInputText [(ngModel)]="flight.bookingCode" placeholder="ABC123" />
-              </div>
-              <div class="flex items-center pt-8">
-                <p-checkbox [(ngModel)]="flight.includesBaggage" [binary]="true" inputId="baggCheck" />
-                <label for="baggCheck" class="ml-2 font-bold text-800">¿Incluye Equipaje?</label>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4 p-4 bg-gray-50 border-round-lg">
-              <div class="flex flex-col gap-2">
-                <label class="font-bold text-sm">¿Tiene Escalas?</label>
-                <p-toggleswitch [(ngModel)]="flight.hasLayovers" />
-              </div>
-              <div class="flex flex-col gap-2" *ngIf="flight.hasLayovers">
-                <label class="font-bold text-sm">Cantidad de Escalas</label>
-                <p-inputnumber [(ngModel)]="flight.layoverCount" [showButtons]="true" [min]="1" />
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-              <div class="flex flex-col gap-2">
-                <label class="font-bold text-800">Origen</label>
-                <input pInputText [(ngModel)]="flight.origin" placeholder="Ej: BOG" />
-              </div>
-              <div class="flex flex-col gap-2">
-                <label class="font-bold text-800">Destino</label>
-                <input pInputText [(ngModel)]="flight.destination" placeholder="Ej: JFK" />
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-              <div class="flex flex-col gap-2">
-                <label class="font-bold text-800">Fecha del Vuelo</label>
-                <p-datepicker [(ngModel)]="flight.date" dateFormat="dd/mm/yy" [showIcon]="true" appendTo="body" />
-              </div>
-              <div class="flex flex-col gap-2">
-                <label class="font-bold text-800">Precio (USD)</label>
-                <p-inputnumber [(ngModel)]="flight.price" mode="currency" currency="USD" locale="en-US" />
-              </div>
-            </div>
-
+        <div class="flex flex-col gap-5 mt-2">
+          <div class="grid grid-cols-2 gap-4">
             <div class="flex flex-col gap-2">
-              <label class="font-bold text-800">URL de la Reserva / Check-in</label>
-              <div class="p-inputgroup">
-                <span class="p-inputgroup-addon"><i class="pi pi-link"></i></span>
-                <input pInputText [(ngModel)]="flight.url" placeholder="https://..." />
-              </div>
+              <label class="font-bold">Aerolínea</label>
+              <input pInputText [(ngModel)]="flight.airline" placeholder="Ej: Avianca" />
             </div>
-
             <div class="flex flex-col gap-2">
-              <label class="font-bold text-800">Descripción / Notas de Viaje</label>
-              <textarea pTextarea [(ngModel)]="flight.description" rows="3" style="resize: none" placeholder="Terminal, puerta de embarque, requisitos de visa..."></textarea>
+              <label class="font-bold">Nº de Vuelo</label>
+              <input pInputText [(ngModel)]="flight.flightNumber" placeholder="Ej: AV123" />
             </div>
           </div>
-        </ng-template>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col gap-2">
+              <label class="font-bold">Código Reserva</label>
+              <input pInputText [(ngModel)]="flight.bookingCode" placeholder="ABC123" />
+            </div>
+            <div class="flex items-center pt-8">
+              <p-checkbox [(ngModel)]="flight.includesBaggage" [binary]="true" inputId="bagg" />
+              <label for="bagg" class="ml-2 font-bold text-sm">¿Incluye Equipaje?</label>
+            </div>
+          </div>
+
+          <div class="p-4 bg-surface-50 dark:bg-surface-900 rounded-lg">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="flex flex-col gap-2">
+                    <label class="font-bold text-sm">¿Escalas?</label>
+                    <p-toggleswitch [(ngModel)]="flight.hasLayovers" />
+                </div>
+                <div class="flex flex-col gap-2" *ngIf="flight.hasLayovers">
+                    <label class="font-bold text-sm">Nº Escalas</label>
+                    <p-inputnumber [(ngModel)]="flight.layoverCount" [showButtons]="true" [min]="1" />
+                </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col gap-2">
+              <label class="font-bold">Origen</label>
+              <input pInputText [(ngModel)]="flight.origin" />
+            </div>
+            <div class="flex flex-col gap-2">
+              <label class="font-bold">Destino</label>
+              <input pInputText [(ngModel)]="flight.destination" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col gap-2">
+              <label class="font-bold">Fecha</label>
+              <p-datepicker [(ngModel)]="flight.date" dateFormat="dd/mm/yy" [showIcon]="true" appendTo="body" />
+            </div>
+            <div class="flex flex-col gap-2">
+              <label class="font-bold">Precio (USD)</label>
+              <p-inputnumber [(ngModel)]="flight.price" mode="currency" currency="USD" />
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label class="font-bold text-sm">Link de Reserva</label>
+            <input pInputText [(ngModel)]="flight.url" placeholder="https://..." />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label class="font-bold text-sm">Descripción / Notas</label>
+            <textarea pTextarea [(ngModel)]="flight.description" rows="2"></textarea>
+          </div>
+        </div>
 
         <ng-template #footer>
-          <div class="flex justify-end gap-2">
-              <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary" (onClick)="hideDialog()" />
-              <p-button label="Guardar Vuelo" icon="pi pi-save" severity="success" (onClick)="saveFlight()" />
-          </div>
+            <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="hideDialog()" />
+            <p-button label="Guardar Vuelo" icon="pi pi-save" severity="success" (onClick)="saveFlight()" />
         </ng-template>
       </p-dialog>
     </div>
@@ -233,70 +216,144 @@ export class Empty implements OnInit {
   flights = signal<Flight[]>([]);
   flight: Flight = {};
   flightDialog: boolean = false;
+  destinosDialog: boolean = false;
+  listaDestinos: any[] = [];
+  destinoSeleccionado: any = null;
+  vueloPendiente: Flight | null = null;
+
   statuses = [{ label: 'Reservado' }, { label: 'En proceso' }, { label: 'Descartado' }, { label: 'Visto' }];
 
-  constructor(private messageService: MessageService, private confirmationService: ConfirmationService) {}
+  private readonly LS_CALC = 'mis_destinos_data_v2';
+  private readonly LS_VUE = 'mis_vuelos_data_v1';
 
-  ngOnInit() {
-    this.flights.set([{ 
-      id: 1, flightNumber: 'AV123', airline: 'Avianca', bookingCode: 'ABC12', 
-      origin: 'BOG', destination: 'JFK', date: new Date(), price: 450, 
-      status: 'Reservado', hasLayovers: false, includesBaggage: true,
-      url: 'https://www.avianca.com', description: 'Terminal 1, puerta 5. Llegar 3h antes.' 
-    }]);
-  }
+  private messageService = inject(MessageService);
+  private confirmationService = inject(ConfirmationService);
 
-  // FUNCIÓN PARA EL PRESUPUESTO TOTAL
-  calcularTotal() {
-    return this.flights().reduce((acc, f) => acc + (f.price || 0), 0);
-  }
+  // Escuchar cambios externos
+  @HostListener('window:storage')
+  onExternalUpdate() { this.loadFlights(); }
 
-  getSeverity(status: string | undefined) {
-    switch (status) {
-      case 'Reservado': return 'success';
-      case 'En proceso': return 'warn';
-      case 'Descartado': return 'danger';
-      default: return 'secondary';
+  ngOnInit() { this.loadFlights(); }
+
+  loadFlights() {
+    const saved = localStorage.getItem(this.LS_VUE);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      parsed.forEach((f: any) => { if(f.date) f.date = new Date(f.date) });
+      this.flights.set(parsed);
     }
   }
 
-  openNew() {
-    this.flight = { status: 'Visto', date: new Date(), hasLayovers: false, layoverCount: 0, includesBaggage: false, description: '' };
-    this.flightDialog = true;
+  onStatusChange(flight: Flight) {
+    if (flight.status === 'Reservado' && !flight.registradoEnCalculadora) {
+      this.abrirVinculacion(flight);
+    } else if (flight.status !== 'Reservado' && flight.registradoEnCalculadora) {
+      this.eliminarGastoDeCalculadora(flight);
+    }
+    this.saveToLocal();
   }
 
-  editFlight(flight: Flight) {
-    this.flight = { ...flight };
-    this.flightDialog = true;
+  abrirVinculacion(flight: Flight) {
+    const data = localStorage.getItem(this.LS_CALC);
+    this.listaDestinos = data ? JSON.parse(data) : [];
+    if (this.listaDestinos.length === 0) {
+      this.messageService.add({ severity: 'warn', summary: 'Info', detail: 'Crea un destino en la calculadora primero' });
+      return;
+    }
+    this.vueloPendiente = flight;
+    this.destinosDialog = true;
+  }
+
+  confirmarVinculacion() {
+    if (!this.vueloPendiente || !this.destinoSeleccionado) return;
+
+    const dataCalculadora = JSON.parse(localStorage.getItem(this.LS_CALC) || '[]');
+    const index = dataCalculadora.findIndex((d: any) => d.id === this.destinoSeleccionado.id);
+    
+    if (index !== -1) {
+      const gastoId = Date.now();
+      const nuevoGasto = {
+        id: gastoId,
+        categoria: 'Vuelos',
+        descripcion: `Ticket: ${this.vueloPendiente.airline} (${this.vueloPendiente.origin}-${this.vueloPendiente.destination})`,
+        monto: this.vueloPendiente.price || 0
+      };
+
+      if (!dataCalculadora[index].gastos) dataCalculadora[index].gastos = [];
+      dataCalculadora[index].gastos.push(nuevoGasto);
+      localStorage.setItem(this.LS_CALC, JSON.stringify(dataCalculadora));
+      window.dispatchEvent(new Event('storage'));
+
+      this.vueloPendiente.registradoEnCalculadora = true;
+      this.vueloPendiente.refGastoId = gastoId;
+      this.saveToLocal();
+      this.messageService.add({ severity: 'success', summary: 'Sincronizado', detail: 'Sumado a la calculadora' });
+    }
+    this.destinosDialog = false;
+  }
+
+  eliminarGastoDeCalculadora(flight: Flight) {
+    if (!flight.refGastoId) return;
+    const dataCalculadora = JSON.parse(localStorage.getItem(this.LS_CALC) || '[]');
+    let huboCambio = false;
+
+    dataCalculadora.forEach((destino: any) => {
+      if (destino.gastos) {
+        const originalLen = destino.gastos.length;
+        destino.gastos = destino.gastos.filter((g: any) => g.id !== flight.refGastoId);
+        if (destino.gastos.length !== originalLen) huboCambio = true;
+      }
+    });
+
+    if (huboCambio) {
+      localStorage.setItem(this.LS_CALC, JSON.stringify(dataCalculadora));
+      window.dispatchEvent(new Event('storage'));
+      flight.registradoEnCalculadora = false;
+      flight.refGastoId = undefined;
+    }
   }
 
   saveFlight() {
-    if (this.flight.flightNumber?.trim()) {
-      let _flights = [...this.flights()];
-      if (this.flight.id) {
-        const index = _flights.findIndex(f => f.id === this.flight.id);
-        _flights[index] = this.flight;
-      } else {
-        this.flight.id = Math.floor(Math.random() * 1000);
-        _flights.push(this.flight);
-      }
-      this.flights.set(_flights);
-      this.flightDialog = false;
-      this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Vuelo guardado' });
+    let _flights = [...this.flights()];
+    if (this.flight.id) {
+      const idx = _flights.findIndex(f => f.id === this.flight.id);
+      _flights[idx] = this.flight;
+    } else {
+      this.flight.id = Date.now();
+      _flights.push(this.flight);
     }
+    this.flights.set(_flights);
+    this.saveToLocal();
+    this.flightDialog = false;
+
+    if (this.flight.status === 'Reservado') this.onStatusChange(this.flight);
   }
 
-  deleteFlight(flight: Flight) {
+  deleteFlight(f: Flight) {
     this.confirmationService.confirm({
-      message: `¿Eliminar el vuelo ${flight.flightNumber}?`,
+      message: `¿Borrar vuelo ${f.flightNumber}? Se eliminará también de la calculadora si está vinculado.`,
       header: 'Confirmar eliminación',
       icon: 'pi pi-exclamation-triangle',
       accept: () => {
-        this.flights.set(this.flights().filter(f => f.id !== flight.id));
-        this.messageService.add({ severity: 'success', summary: 'Eliminado', detail: 'Registro borrado' });
+        this.eliminarGastoDeCalculadora(f);
+        this.flights.set(this.flights().filter(x => x.id !== f.id));
+        this.saveToLocal();
+        this.messageService.add({ severity: 'info', summary: 'Eliminado', detail: 'Vuelo quitado de la lista' });
       }
     });
   }
 
+  saveToLocal() { localStorage.setItem(this.LS_VUE, JSON.stringify(this.flights())); }
+  calcularTotal() { return this.flights().reduce((acc, f) => acc + (f.price || 0), 0); }
+  
+  getSeverity(s: string | undefined) {
+    if (s === 'Reservado') return 'success';
+    if (s === 'En proceso') return 'warn';
+    if (s === 'Descartado') return 'danger';
+    return 'secondary';
+  }
+
+  openNew() { this.flight = { status: 'Visto', date: new Date(), hasLayovers: false }; this.flightDialog = true; }
+  editFlight(f: Flight) { this.flight = { ...f }; this.flightDialog = true; }
   hideDialog() { this.flightDialog = false; }
 }

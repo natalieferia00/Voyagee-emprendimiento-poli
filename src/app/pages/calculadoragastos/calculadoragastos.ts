@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, HostListener } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MessageService, ConfirmationService } from 'primeng/api';
@@ -62,7 +62,7 @@ import { TagModule } from 'primeng/tag';
                         <td class="text-primary font-bold">{{sumarGastos(d) | currency:'USD'}}</td>
                         <td>
                             <div class="flex gap-2">
-                                <p-button icon="pi pi-plus" styleClass="p-button-success p-button-sm p-button-text" (onClick)="abrirGasto(d)"></p-button>
+                                <p-button icon="pi pi-plus" pTooltip="Añadir gasto manual" styleClass="p-button-success p-button-sm p-button-text" (onClick)="abrirGasto(d)"></p-button>
                                 <p-button icon="pi pi-trash" styleClass="p-button-danger p-button-sm p-button-text" (onClick)="eliminarDestino(d)"></p-button>
                             </div>
                         </td>
@@ -78,7 +78,7 @@ import { TagModule } from 'primeng/tag';
             </div>
         </p-dialog>
 
-        <p-dialog header="Añadir Gasto" [(visible)]="displayGasto" [modal]="true" [style]="{width: '300px'}">
+        <p-dialog header="Añadir Gasto Manual" [(visible)]="displayGasto" [modal]="true" [style]="{width: '300px'}">
             <div class="flex flex-col gap-3 p-fluid">
                 <select class="p-inputtext" [(ngModel)]="tempGasto.categoria">
                     <option value="Vuelos">Tiquetes</option>
@@ -94,6 +94,7 @@ import { TagModule } from 'primeng/tag';
 })
 export class CalculadoraGastosComponent implements OnInit {
     private confirmationService = inject(ConfirmationService);
+    private messageService = inject(MessageService);
     
     destinos: any[] = [];
     presupuestoGlobal: number = 0;
@@ -110,17 +111,57 @@ export class CalculadoraGastosComponent implements OnInit {
     private readonly LS_KEY_GLOBAL = 'mi_presupuesto_global';
     private readonly LS_KEY_SYNC = 'app_presupuesto_sync';
 
+    // RECEPTOR UNIVERSAL: Escucha cambios de Hoteles, Vuelos, Comidas, etc.
+    @HostListener('window:storage')
+    onExternalUpdate() {
+        this.loadInitialData();
+        // Opcional: Mostrar un mensaje sutil de que se actualizó
+        console.log('Calculadora sincronizada con cambios externos.');
+    }
+
     ngOnInit() {
-        // ✅ CORRECCIÓN: Usar ?? '' para evitar el error de string | null
+        this.loadInitialData();
+    }
+
+    loadInitialData() {
         const savedData = localStorage.getItem(this.LS_KEY_DATA) ?? '';
         const savedGlobal = localStorage.getItem(this.LS_KEY_GLOBAL) ?? '0';
         
-        if (savedData) this.destinos = JSON.parse(savedData);
+        this.destinos = savedData ? JSON.parse(savedData) : [];
         this.presupuestoGlobal = JSON.parse(savedGlobal);
         
-        this.recalcularYNotificar();
+        this.recalcularTotales();
     }
 
+    // He separado la notificación de la actualización local
+    actualizarTodo() {
+        localStorage.setItem(this.LS_KEY_DATA, JSON.stringify(this.destinos));
+        localStorage.setItem(this.LS_KEY_GLOBAL, JSON.stringify(this.presupuestoGlobal));
+        this.recalcularTotales();
+        
+        // Notificamos a otros posibles componentes (como Widgets de Dashboard)
+        window.dispatchEvent(new Event('storage'));
+    }
+
+    recalcularTotales() {
+        this.totalGastado = this.destinos.reduce((acc, d) => acc + this.sumarGastos(d), 0);
+        
+        const suma = (cat: string) => this.destinos.reduce((acc, d) => 
+            acc + (d.gastos || []).filter((g: any) => g.categoria === cat).reduce((s: number, g: any) => s + g.monto, 0), 0);
+
+        const presupuestoPorCat = this.presupuestoGlobal / 4;
+
+        const dataWidget = [
+            { nombre: 'Tiquetes', color: 'bg-orange-500', gastado: suma('Vuelos'), total: presupuestoPorCat || 1 },
+            { nombre: 'Alimentación', color: 'bg-cyan-500', gastado: suma('Comida'), total: presupuestoPorCat || 1 },
+            { nombre: 'Hospedaje', color: 'bg-pink-500', gastado: suma('Hospedaje'), total: presupuestoPorCat || 1 },
+            { nombre: 'Otros', color: 'bg-green-500', gastado: suma('Otros'), total: presupuestoPorCat || 1 }
+        ];
+
+        localStorage.setItem(this.LS_KEY_SYNC, JSON.stringify(dataWidget));
+    }
+
+    // Métodos de gestión interna
     guardarDestino() {
         if (!this.tempDestino.nombre) return;
         this.destinos = [...this.destinos, { ...this.tempDestino, id: Date.now(), gastos: [] }];
@@ -133,7 +174,7 @@ export class CalculadoraGastosComponent implements OnInit {
 
     guardarGasto() {
         if (this.tempGasto.monto <= 0 || !this.destinoActual) return;
-        this.destinoActual.gastos.push({ ...this.tempGasto });
+        this.destinoActual.gastos.push({ ...this.tempGasto, id: Date.now() });
         this.destinos = [...this.destinos];
         this.tempGasto = { categoria: 'Vuelos', monto: 0 };
         this.displayGasto = false;
@@ -150,29 +191,5 @@ export class CalculadoraGastosComponent implements OnInit {
         });
     }
 
-    actualizarTodo() {
-        localStorage.setItem(this.LS_KEY_DATA, JSON.stringify(this.destinos));
-        localStorage.setItem(this.LS_KEY_GLOBAL, JSON.stringify(this.presupuestoGlobal));
-        this.recalcularYNotificar();
-    }
-
-    recalcularYNotificar() {
-        this.totalGastado = this.destinos.reduce((acc, d) => acc + this.sumarGastos(d), 0);
-        const suma = (cat: string) => this.destinos.reduce((acc, d) => 
-            acc + (d.gastos || []).filter((g: any) => g.categoria === cat).reduce((s: number, g: any) => s + g.monto, 0), 0);
-
-        const presupuestoPorCat = this.presupuestoGlobal / 4;
-
-        const dataWidget = [
-            { nombre: 'Tiquetes', color: 'bg-orange-500', gastado: suma('Vuelos'), total: presupuestoPorCat || 1 },
-            { nombre: 'Alimentación', color: 'bg-cyan-500', gastado: suma('Comida'), total: presupuestoPorCat || 1 },
-            { nombre: 'Hospedaje', color: 'bg-pink-500', gastado: suma('Hospedaje'), total: presupuestoPorCat || 1 },
-            { nombre: 'Otros', color: 'bg-green-500', gastado: suma('Otros'), total: presupuestoPorCat || 1 }
-        ];
-
-        localStorage.setItem(this.LS_KEY_SYNC, JSON.stringify(dataWidget));
-        window.dispatchEvent(new Event('storage'));
-    }
-
     sumarGastos(d: any) { return (d.gastos || []).reduce((acc: number, g: any) => acc + g.monto, 0); }
-} 
+}
