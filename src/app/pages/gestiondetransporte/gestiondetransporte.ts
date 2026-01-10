@@ -65,10 +65,10 @@ export class Gestiondetransporte implements OnInit {
     onExternalUpdate() { this.loadViajes(); }
 
     mediosTransporte = [
-        { label: '✈️ Aéreo', value: 'Aéreo' },
-        { label: '🚢 Marítimo', value: 'Marítimo' },
-        { label: '🚌 Terrestre', value: 'Terrestre' },
-        { label: '🚗 Alquiler / Taxi', value: 'Alquiler' }
+        { label: 'Aéreo', value: 'Aéreo' },
+        { label: 'Marítimo', value: 'Marítimo' },
+        { label: 'Terrestre', value: 'Terrestre' },
+        { label: 'Alquiler / Taxi', value: 'Alquiler' }
     ];
 
     estados = [
