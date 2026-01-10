@@ -128,7 +128,7 @@ export class Login {
             this.messageService.add({ severity: 'success', summary: 'Bienvenido', detail: 'Accediendo...' });
             
             // Redirigir al home tras un pequeño delay para que se vea el toast
-            setTimeout(() => this.router.navigate(['/']), 1000);
+           setTimeout(() => this.router.navigate(['/dashboard']), 1000);
         } else {
             this.showError('Credenciales incorrectas');
         }
