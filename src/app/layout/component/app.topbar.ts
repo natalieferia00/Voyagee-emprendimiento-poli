@@ -5,10 +5,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { StyleClassModule } from 'primeng/styleclass';
 import { DatePickerModule } from 'primeng/datepicker';
-import { InputNumberModule } from 'primeng/inputnumber'; // Opcional para los inputs de moneda
+import { InputNumberModule } from 'primeng/inputnumber';
+import { DialogModule } from 'primeng/dialog';
 import { AppConfigurator } from './app.configurator';
 import { LayoutService } from '../service/layout.service';
 import { PerfilUsuarioCardComponent } from '../component/perfil-usuario-card/perfil-usuario-card';
+import { ConversorMonedaComponent } from '../component/conversor-moneda/conversor-moneda';
 
 @Component({
     selector: 'app-topbar',
@@ -20,8 +22,10 @@ import { PerfilUsuarioCardComponent } from '../component/perfil-usuario-card/per
         StyleClassModule,
         DatePickerModule,
         InputNumberModule,
+        DialogModule,
         AppConfigurator,
-        PerfilUsuarioCardComponent 
+        PerfilUsuarioCardComponent,
+        ConversorMonedaComponent 
     ],
     template: `
     <div class="layout-topbar">
@@ -57,11 +61,11 @@ import { PerfilUsuarioCardComponent } from '../component/perfil-usuario-card/per
             </div>
 
             <div class="layout-topbar-menu hidden lg:block">
-                <div class="layout-topbar-menu-content">
+                <div class="layout-topbar-menu-content flex flex-column gap-2">
                     
-                    <div class="relative inline-block">
-                        <button type="button" class="layout-topbar-action" (click)="toggleCalendar()">
-                            <i class="pi pi-calendar"></i>
+                    <div class="relative">
+                        <button type="button" class="layout-topbar-action w-full justify-content-start" (click)="toggleCalendar()">
+                            <i class="pi pi-calendar mr-2"></i>
                             <span>Calendar</span>
                         </button>
                         <div *ngIf="mostrarCalendario" class="absolute right-0 mt-2 z-50 animate-fadein shadow-4 border-round overflow-hidden">
@@ -69,35 +73,36 @@ import { PerfilUsuarioCardComponent } from '../component/perfil-usuario-card/per
                         </div>
                     </div>
 
-                    <div class="relative inline-block">
-                        <button type="button" class="layout-topbar-action" (click)="toggleConversor()">
-                            <i class="pi pi-money-bill"></i>
+                    <div class="relative">
+                        <button type="button" class="layout-topbar-action w-full justify-content-start" (click)="mostrarConversor = true">
+                            <i class="pi pi-money-bill mr-2"></i>
                             <span>Currency</span>
                         </button>
-                        
-                        <div *ngIf="mostrarConversor" class="absolute right-0 mt-2 z-50 animate-fadein shadow-4 border-round p-3 surface-card" style="min-width: 220px;">
-                            <div class="flex flex-column gap-2">
-                                <span class="font-bold text-sm mb-2">Conversor (Estatico)</span>
-                                <div class="flex align-items-center justify-content-between p-2 border-1 border-round surface-100">
-                                    <span class="text-xs font-medium">100.000 COP</span>
-                                    <i class="pi pi-arrow-right text-xs mx-2"></i>
-                                    <span class="text-xs font-bold text-primary">25.32 USD</span>
-                                </div>
-                                <div class="text-center mt-2">
-                                    <small class="text-color-secondary">Tasa: 1 USD ≈ 3.950 COP</small>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
-                    <button type="button" class="layout-topbar-action" (click)="togglePerfilCard()">
-                        <i class="pi pi-user"></i>
-                        <span>Profile</span>
-                    </button>
+                    <div class="relative">
+                        <button type="button" class="layout-topbar-action w-full justify-content-start" (click)="togglePerfilCard()">
+                            <i class="pi pi-user mr-2"></i>
+                            <span>Profile</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <p-dialog 
+        header="Conversor de Moneda" 
+        [(visible)]="mostrarConversor" 
+        [modal]="true" 
+        [style]="{ width: '450px' }" 
+        [draggable]="false" 
+        [resizable]="false"
+        [breakpoints]="{ '960px': '75vw', '640px': '90vw' }">
+        
+        <app-conversor-moneda></app-conversor-moneda>
+        
+    </p-dialog>
 
     <div *ngIf="mostrarPerfilCard" class="fixed top-20 right-4 z-50 animate-fadein">
         <app-perfil-usuario-card></app-perfil-usuario-card>
@@ -107,6 +112,14 @@ import { PerfilUsuarioCardComponent } from '../component/perfil-usuario-card/per
         .animate-fadein { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         :host ::ng-deep .p-datepicker-inline { border: none; background: var(--surface-card); }
+        
+        /* Ajuste para que los botones verticales se vean bien */
+        .layout-topbar-action.w-full {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+        }
     `]
 })
 export class AppTopbar {
@@ -126,7 +139,6 @@ export class AppTopbar {
         this.mostrarPerfilCard = !this.mostrarPerfilCard;
         if (this.mostrarPerfilCard) {
             this.mostrarCalendario = false;
-            this.mostrarConversor = false;
         }
     }
 
@@ -134,16 +146,6 @@ export class AppTopbar {
         this.mostrarCalendario = !this.mostrarCalendario;
         if (this.mostrarCalendario) {
             this.mostrarPerfilCard = false;
-            this.mostrarConversor = false;
-        }
-    }
-
-  
-    toggleConversor() {
-        this.mostrarConversor = !this.mostrarConversor;
-        if (this.mostrarConversor) {
-            this.mostrarPerfilCard = false;
-            this.mostrarCalendario = false;
         }
     }
 }
