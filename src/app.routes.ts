@@ -1,12 +1,11 @@
 import { Routes } from '@angular/router';
 import { AppLayout } from './app/layout/component/app.layout';
 import { Dashboard } from './app/pages/dashboard/dashboard';
-import { Documentation } from './app/pages/documentation/documentation';
 import { Landing } from './app/pages/landing/landing';
 import { Notfound } from './app/pages/notfound/notfound';
 import { MapaRutaComponent } from '@/pages/maparuta/maparuta';
 import { ListaViajeComponent } from '@/pages/lista-viaje/lista-viaje';
-import { SegurosComponent } from '@/pages/seguros/seguros';
+import { DocumentationComponent } from '@/pages/seguros/seguros';
 import { CalculadoraGastosComponent } from '@/pages/calculadoragastos/calculadoragastos';
 import { Gestiondetransporte } from '@/pages/gestiondetransporte/gestiondetransporte';
 import { GestionAlimentacionComponent } from '@/pages/gestionalimentacion/gestionalimentacion';
@@ -31,9 +30,9 @@ export const appRoutes: Routes = [
           { path: 'actividades-y-excursiones', component: ActividadesyExcursionesComponent },
           { path: 'crear-notificaciones', component: CrearNotificacionComponent },
           { path: 'gestion-transporte', component: Gestiondetransporte },
-            { path: 'seguros', component: SegurosComponent },
+            { path: 'seguros', component: DocumentationComponent },
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
-            { path: 'documentation', component: Documentation },
+    
             { path: 'pages', loadChildren: () => import('./app/pages/pages.routes') }
         ]
     },

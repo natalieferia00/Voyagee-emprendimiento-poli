@@ -1,67 +1,91 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, signal, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+
+// PrimeNG
 import { TableModule } from 'primeng/table';
-import { ToggleButtonModule } from 'primeng/togglebutton';
-import { TagModule } from 'primeng/tag';
+import { ButtonModule } from 'primeng/button';
+import { DialogModule } from 'primeng/dialog';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { CheckboxModule } from 'primeng/checkbox';
+import { TooltipModule } from 'primeng/tooltip';
+import { InputTextModule } from 'primeng/inputtext';
+
 
 @Component({
-  selector: 'app-seguros',
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    TableModule,
-    ToggleButtonModule,
-    TagModule
-  ],
-  templateUrl: './seguros.html',
-  styleUrls: ['./seguros.scss']
+    selector: 'app-documentation',
+    standalone: true,
+    imports: [
+        CommonModule, FormsModule, TableModule, ButtonModule, 
+        DialogModule, InputTextModule, InputNumberModule, 
+        CheckboxModule, TooltipModule, 
+    ],
+    templateUrl: './seguros.html'
 })
-export class SegurosComponent {
-  // ✅ Cambié el nombre de la variable para que coincida con el HTML
-  precioCongelado = true;
-
-  seguros = [
-    {
-      nombre: 'Viaje Seguro Plus',
-      compania: 'Assist Card',
-      cobertura: 'Médica + Pérdida de equipaje',
-      destino: 'Europa',
-      fechaInicio: '2025-12-01',
-      fechaFin: '2025-12-20',
-      estado: 'Vigente',
-      url: 'https://www.assistcard.com/co',
-      precio: 120.5
-    },
-    {
-      nombre: 'Plan Global Travel',
-      compania: 'Allianz',
-      cobertura: 'Médica + Cancelación de vuelo',
-      destino: 'Latinoamérica',
-      fechaInicio: '2025-07-15',
-      fechaFin: '2025-07-30',
-      estado: 'Expirado',
-      url: 'https://www.allianz-assistance.com',
-      precio: 95.0
-    },
-    {
-      nombre: 'Seguro Básico Axa',
-      compania: 'AXA Assistance',
-      cobertura: 'Médica',
-      destino: 'Asia',
-      fechaInicio: '2025-08-01',
-      fechaFin: '2025-08-21',
-      estado: 'Cotizado',
-      url: 'https://www.axa-assistance.com',
-      precio: 60.75
-    }
-  ];
-
-  formatCurrency(value: number): string {
-    return value.toLocaleString('es-CO', {
-      style: 'currency',
-      currency: 'COP'
+export class DocumentationComponent implements OnInit {
+    displayModal: boolean = false;
+    
+    // Lista de documentos usando Signals
+    documentos = signal<any[]>(JSON.parse(localStorage.getItem('docs_viaje') || '[]'));
+    
+    // Calculo automático del total para el cuadro negro
+    totalAcumulado = computed(() => {
+        return this.documentos()
+            .filter(d => d.reservadoComprado)
+            .reduce((acc, curr) => acc + (curr.costo || 0), 0);
     });
-  }
+
+    nuevoDoc: any = this.resetForm();
+
+    constructor() {
+        // Cada vez que documentos cambie, sincronizamos con LocalStorage y la Calculadora
+        effect(() => {
+            const lista = this.documentos();
+            localStorage.setItem('docs_viaje', JSON.stringify(lista));
+            
+            // Disparar evento para que otros componentes (como la calculadora) se actualicen
+            window.dispatchEvent(new Event('storage'));
+        });
+    }
+
+    ngOnInit(): void {}
+
+    toggleEstado(): void {
+        this.documentos.update(l => [...l]);
+    }
+
+    resetForm() {
+        return { 
+            nombre: '', 
+            entidad: '', 
+            url: '', 
+            descripcion: '', 
+            costo: 0, 
+            reservadoComprado: false 
+        };
+    }
+
+    abrirModal(): void {
+        this.nuevoDoc = this.resetForm();
+        this.displayModal = true;
+    }
+
+    guardar(): void {
+        if (this.nuevoDoc.nombre) {
+            this.documentos.update(l => [...l, { ...this.nuevoDoc, id: Date.now() }]);
+            this.displayModal = false;
+        }
+    }
+
+    eliminar(id: number): void {
+        this.documentos.update(l => l.filter(d => d.id !== id));
+    }
+
+    formatCurrency(v: number): string {
+        return v.toLocaleString('es-CO', { 
+            style: 'currency', 
+            currency: 'COP', 
+            minimumFractionDigits: 0 
+        });
+    }
 }

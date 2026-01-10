@@ -41,7 +41,7 @@ export class AppMenu implements OnInit {
                             { label: 'Transporte', icon: 'pi pi-fw pi-car', routerLink: ['/gestion-transporte'] },
                             { label: 'Alimentación', icon: 'pi pi-fw pi-coffee', routerLink: ['/gestion-alimentacion'] },
                             { label: 'Actividades y Excursiones', icon: 'pi pi-fw pi-sun', routerLink: ['/actividades-y-excursiones'] },
-                            { label: 'Documentos', icon: 'pi pi-fw pi-shield', routerLink: ['/seguros'] },
+                             { label: 'Documentos', icon: 'pi pi-file', routerLink: ['/seguros'] },
                             { label: 'Presupuesto', icon: 'pi pi-fw pi-calculator', routerLink: ['/calculadora-gastos'] }
                         ]
                     }
