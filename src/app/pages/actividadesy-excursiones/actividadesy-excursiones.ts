@@ -1,5 +1,5 @@
 import { Component, OnInit, signal, HostListener, inject } from '@angular/core';
-import { CommonModule, CurrencyPipe } from '@angular/common';
+import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 // PrimeNG
@@ -21,13 +21,13 @@ import { TooltipModule } from 'primeng/tooltip';
 
 interface Tour {
     id?: number;
-    nombre?: string | null;
-    destino?: string | null;
-    duracion?: string | null;
-    precio?: number | null;
-    estado?: string | null;
-    descripcion?: string | null;
-    valoracion?: number | null;
+    nombre?: string;
+    destino?: string;
+    duracion?: string;
+    precio?: number;
+    estado?: string;
+    descripcion?: string;
+    valoracion?: number;
     fecha?: Date | null;
     registradoEnCalculadora?: boolean;
     refGastoId?: number;
@@ -42,7 +42,7 @@ interface Tour {
         SelectModule, InputNumberModule, TextareaModule, ConfirmDialogModule, 
         ToastModule, DatePickerModule, TooltipModule
     ],
-    providers: [ConfirmationService, MessageService, CurrencyPipe],
+    providers: [ConfirmationService, MessageService, CurrencyPipe, DatePipe],
     template: `
     <p-toast />
     <p-confirmdialog />
@@ -51,26 +51,23 @@ interface Tour {
         <div class="flex justify-between items-center mb-4">
             <div class="font-semibold text-xl">Gestión de Actividades y Excursiones</div>
             <p-tag severity="contrast" [style]="{'font-size': '1.1rem', 'padding': '8px 15px'}" 
-                   [value]="'Inversión Total: ' + (calcularTotal() | currency:'COP':'symbol':'1.0-0')" />
+                   [value]="'Presupuesto Actividades: ' + (calcularTotal() | currency:'COP':'symbol':'1.0-0')" />
         </div>
 
         <p-toolbar styleClass="mb-6">
             <ng-template #start>
-                <p-button label="Nueva Actividad" icon="pi pi-plus" severity="success" class="mr-2" (onClick)="openNew()" />
-            </ng-template>
-            <ng-template #end>
-                <p-button label="Exportar" icon="pi pi-upload" severity="secondary" [outlined]="true" (onClick)="dt.exportCSV()" />
+                <p-button label="Nueva Actividad" icon="pi pi-plus" severity="success" (onClick)="openNew()" />
             </ng-template>
         </p-toolbar>
 
-        <p-table #dt [value]="tours()" [rows]="10" [paginator]="true" [rowHover]="true" [showGridlines]="true">
+        <p-table #dt [value]="tours()" [rows]="10" [paginator]="true" [rowHover]="true" responsiveLayout="scroll">
             <ng-template #header>
                 <tr>
-                    <th>Actividad / Destino</th>
-                    <th>Fecha</th>
-                    <th>Costo Estimado</th>
-                    <th style="min-width: 12rem">Estado (Cambio Rápido)</th>
-                    <th>Valoración</th>
+                    <th>Actividad / Lugar</th>
+                    <th>Fecha Planificada</th>
+                    <th>Costo</th>
+                    <th style="min-width: 12rem">Estado</th>
+                    <th>Rating</th>
                     <th style="width: 8rem">Acciones</th>
                 </tr>
             </ng-template>
@@ -79,7 +76,7 @@ interface Tour {
                 <tr>
                     <td>
                         <div class="font-bold text-800">{{ tour.nombre }}</div>
-                        <div class="text-xs text-slate-500 italic">{{ tour.destino }}</div>
+                        <div class="text-xs text-slate-500 italic"><i class="pi pi-map-marker text-[10px]"></i> {{ tour.destino }}</div>
                     </td>
                     <td>{{ tour.fecha | date: 'dd/MM/yyyy' }}</td>
                     <td class="font-semibold text-primary">
@@ -89,14 +86,13 @@ interface Tour {
                         <p-select 
                             [(ngModel)]="tour.estado" 
                             [options]="estados" 
+                            optionLabel="label" 
+                            optionValue="value"
                             (onChange)="onStatusChange(tour)"
                             styleClass="w-full border-none bg-transparent shadow-none"
                             appendTo="body">
                             <ng-template #selectedItem let-selectedOption>
                                 <p-tag [value]="selectedOption.label" [severity]="getSeverityStatus(selectedOption.value)" />
-                            </ng-template>
-                            <ng-template let-option #item>
-                                <p-tag [value]="option.label" [severity]="getSeverityStatus(option.value)" />
                             </ng-template>
                         </p-select>
                     </td>
@@ -111,59 +107,53 @@ interface Tour {
             </ng-template>
         </p-table>
 
-        <p-dialog [(visible)]="tourDialog" [style]="{ width: '550px' }" header="Detalles de la Actividad" [modal]="true" styleClass="p-fluid">
-            <ng-template #content>
-                <div class="flex flex-col gap-5 pt-2">
+        <p-dialog [(visible)]="tourDialog" [style]="{ width: '500px' }" header="Detalles de la Actividad" [modal]="true" styleClass="p-fluid">
+            <div class="flex flex-col gap-4 pt-2">
+                <div class="flex flex-col gap-2">
+                    <label class="font-bold">Nombre del Tour / Actividad</label>
+                    <input type="text" pInputText [(ngModel)]="tour.nombre" placeholder="Ej: Snorkeling en Barú" />
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
                     <div class="flex flex-col gap-2">
-                        <label class="font-bold text-900">Nombre de la Actividad</label>
-                        <input type="text" pInputText [(ngModel)]="tour.nombre" placeholder="Ej: Tour Islas del Rosario..." autofocus />
+                        <label class="font-bold">Lugar / Destino</label>
+                        <input type="text" pInputText [(ngModel)]="tour.destino" placeholder="Ciudad o punto" />
                     </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="flex flex-col gap-2">
-                            <label class="font-bold text-900">Destino</label>
-                            <input type="text" pInputText [(ngModel)]="tour.destino" placeholder="Ciudad, Lugar..." />
-                        </div>
-                        <div class="flex flex-col gap-2">
-                            <label class="font-bold text-900">Fecha</label>
-                            <p-datepicker [(ngModel)]="tour.fecha" dateFormat="dd/mm/yy" [showIcon]="true" appendTo="body" />
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="flex flex-col gap-2">
-                            <label class="font-bold text-900">Costo (COP)</label>
-                            <p-inputnumber [(ngModel)]="tour.precio" mode="currency" currency="COP" locale="es-CO" placeholder="$ 0" />
-                        </div>
-                        <div class="flex flex-col gap-2">
-                            <label class="font-bold text-900">Valoración</label>
-                            <div class="pt-2">
-                                <p-rating [(ngModel)]="tour.valoracion" />
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="flex flex-col gap-2">
-                        <label class="font-bold text-900">Descripción / Notas</label>
-                        <textarea pTextarea [(ngModel)]="tour.descripcion" rows="4" style="resize: none" placeholder="Horarios, puntos de encuentro..."></textarea>
+                        <label class="font-bold">Fecha</label>
+                        <p-datepicker [(ngModel)]="tour.fecha" dateFormat="dd/mm/yy" [showIcon]="true" appendTo="body" />
                     </div>
                 </div>
-            </ng-template>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="flex flex-col gap-2">
+                        <label class="font-bold">Costo (COP)</label>
+                        <p-inputnumber [(ngModel)]="tour.precio" mode="currency" currency="COP" locale="es-CO" />
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <label class="font-bold">Prioridad / Interés</label>
+                        <div class="pt-2"><p-rating [(ngModel)]="tour.valoracion" /></div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="font-bold">Notas o Requerimientos</label>
+                    <textarea pTextarea [(ngModel)]="tour.descripcion" rows="3" placeholder="Llevar protector solar, punto de encuentro..."></textarea>
+                </div>
+            </div>
 
             <ng-template #footer>
-                <div class="flex justify-end gap-2">
-                    <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary" (onClick)="hideDialog()" />
-                    <p-button label="Guardar Actividad" icon="pi pi-check" severity="success" (onClick)="saveTour()" />
-                </div>
+                <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="hideDialog()" />
+                <p-button label="Guardar" icon="pi pi-check" severity="success" (onClick)="saveTour()" />
             </ng-template>
         </p-dialog>
 
-        <p-dialog header="Vincular a Presupuesto" [(visible)]="destinosDialog" [modal]="true" [style]="{width: '400px'}">
+        <p-dialog header="Asignar a Presupuesto" [(visible)]="destinosDialog" [modal]="true" [style]="{width: '400px'}">
             <div class="p-2">
-                <p class="mb-4">¿A qué destino quieres asignar este gasto reservado?</p>
-                <p-select [options]="listaDestinos" [(ngModel)]="destinoSeleccionado" optionLabel="nombre" placeholder="Seleccionar destino" styleClass="w-full" appendTo="body" />
+                <p class="mb-4 text-sm">Esta actividad se encuentra <b>Reservada</b>. ¿A qué destino pertenece este gasto?</p>
+                <p-select [options]="listaDestinos" [(ngModel)]="destinoSeleccionado" optionLabel="nombre" placeholder="Elegir Destino" styleClass="w-full" appendTo="body" />
                 <div class="flex justify-end mt-4">
-                    <p-button label="Confirmar" (onClick)="confirmarVinculacion()" [disabled]="!destinoSeleccionado" />
+                    <p-button label="Sincronizar" icon="pi pi-sync" (onClick)="confirmarVinculacion()" [disabled]="!destinoSeleccionado" />
                 </div>
             </div>
         </p-dialog>
@@ -219,7 +209,11 @@ export class ActividadesyExcursionesComponent implements OnInit {
     abrirVinculacion(t: Tour) {
         const data = localStorage.getItem(this.LS_CALC_KEY);
         this.listaDestinos = data ? JSON.parse(data) : [];
-        if (this.listaDestinos.length === 0) return;
+        if (this.listaDestinos.length === 0) {
+            this.messageService.add({ severity: 'warn', summary: 'Calculadora Vacía', detail: 'Crea un destino primero' });
+            t.estado = 'Visto';
+            return;
+        }
         this.tourPendiente = t;
         this.destinosDialog = true;
     }
@@ -234,8 +228,9 @@ export class ActividadesyExcursionesComponent implements OnInit {
             if (!dataCalc[idx].gastos) dataCalc[idx].gastos = [];
             dataCalc[idx].gastos.push({
                 id: gastoId,
+                refId: this.tourPendiente.id, // Para vinculación cruzada
                 categoria: 'Otros',
-                descripcion: `Actividad: ${this.tourPendiente.nombre}`,
+                descripcion: `Tour: ${this.tourPendiente.nombre}`,
                 monto: this.tourPendiente.precio || 0
             });
             localStorage.setItem(this.LS_CALC_KEY, JSON.stringify(dataCalc));
@@ -244,56 +239,68 @@ export class ActividadesyExcursionesComponent implements OnInit {
             this.tourPendiente.registradoEnCalculadora = true;
             this.tourPendiente.refGastoId = gastoId;
             this.saveToLocal();
-            this.messageService.add({ severity: 'success', summary: 'Sincronizado', detail: 'Añadido al presupuesto' });
+            this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Sumado al presupuesto global' });
         }
         this.destinosDialog = false;
     }
 
     eliminarDeCalculadora(t: Tour) {
-        if (!t.refGastoId) return;
         const dataCalc = JSON.parse(localStorage.getItem(this.LS_CALC_KEY) || '[]');
+        let cambio = false;
         dataCalc.forEach((dest: any) => {
-            if (dest.gastos) dest.gastos = dest.gastos.filter((g: any) => g.id !== t.refGastoId);
+            if (dest.gastos) {
+                const count = dest.gastos.length;
+                dest.gastos = dest.gastos.filter((g: any) => g.refId !== t.id && g.id !== t.refGastoId);
+                if (dest.gastos.length !== count) cambio = true;
+            }
         });
-        localStorage.setItem(this.LS_CALC_KEY, JSON.stringify(dataCalc));
-        window.dispatchEvent(new Event('storage'));
+        if (cambio) {
+            localStorage.setItem(this.LS_CALC_KEY, JSON.stringify(dataCalc));
+            window.dispatchEvent(new Event('storage'));
+        }
         t.registradoEnCalculadora = false;
         t.refGastoId = undefined;
+    }
+
+    saveTour() {
+        if (!this.tour.nombre?.trim()) return;
+        let _tours = [...this.tours()];
+        if (this.tour.id) {
+            const index = _tours.findIndex(r => r.id === this.tour.id);
+            _tours[index] = this.tour;
+        } else {
+            this.tour.id = Date.now();
+            _tours.push(this.tour);
+        }
+        this.tours.set(_tours);
+        this.saveToLocal();
+
+        if (this.tour.estado === 'Reservado') {
+            this.onStatusChange(this.tour);
+        } else if (this.tour.registradoEnCalculadora) {
+            this.eliminarDeCalculadora(this.tour);
+        }
+
+        this.tourDialog = false;
+        this.messageService.add({ severity: 'success', summary: 'Guardado', detail: 'Actividad actualizada' });
+    }
+
+    deleteTour(t: Tour) {
+        this.confirmationService.confirm({
+            message: `¿Eliminar ${t.nombre}? También se quitará del presupuesto.`,
+            accept: () => {
+                this.eliminarDeCalculadora(t);
+                this.tours.set(this.tours().filter((val) => val.id !== t.id));
+                this.saveToLocal();
+                this.messageService.add({ severity: 'info', summary: 'Eliminado', detail: 'Registro borrado' });
+            }
+        });
     }
 
     calcularTotal() { return this.tours().reduce((acc, t) => acc + (t.precio || 0), 0); }
     openNew() { this.tour = { valoracion: 0, estado: 'Visto', precio: 0, fecha: new Date() }; this.tourDialog = true; }
     editTour(t: Tour) { this.tour = { ...t }; this.tourDialog = true; }
     hideDialog() { this.tourDialog = false; }
-
-    saveTour() {
-        if (this.tour.nombre?.trim()) {
-            let _tours = [...this.tours()];
-            if (this.tour.id) {
-                const index = _tours.findIndex(r => r.id === this.tour.id);
-                _tours[index] = this.tour;
-            } else {
-                this.tour.id = Math.floor(Math.random() * 100000);
-                _tours.push(this.tour);
-            }
-            this.tours.set(_tours);
-            this.saveToLocal();
-            this.tourDialog = false;
-            if (this.tour.estado === 'Reservado') this.onStatusChange(this.tour);
-        }
-    }
-
-    deleteTour(t: Tour) {
-        this.confirmationService.confirm({
-            message: `¿Eliminar la actividad ${t.nombre}?`,
-            accept: () => {
-                this.eliminarDeCalculadora(t);
-                this.tours.set(this.tours().filter((val) => val.id !== t.id));
-                this.saveToLocal();
-            }
-        });
-    }
-
     getSeverityStatus(status: any): any {
         const map: any = { 'Reservado': 'success', 'Pendiente': 'warn', 'Visto': 'info', 'Descartado': 'danger' };
         return map[status] || 'secondary';

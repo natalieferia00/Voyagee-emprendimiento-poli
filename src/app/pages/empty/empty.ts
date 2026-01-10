@@ -37,11 +37,11 @@ interface Flight {
   description?: string;
   url?: string;
   registradoEnCalculadora?: boolean;
-  refGastoId?: number; // Referencia única para borrar en la calculadora
+  refGastoId?: number; 
 }
 
 @Component({
-  selector: 'app-empty',
+  selector: 'app-vuelos',
   standalone: true,
   imports: [
     CommonModule, FormsModule, TableModule, TagModule, InputTextModule, 
@@ -105,7 +105,8 @@ interface Flight {
                 optionLabel="label" 
                 optionValue="label"
                 (onChange)="onStatusChange(flight)"
-                styleClass="w-full border-none shadow-none bg-transparent">
+                styleClass="w-full border-none shadow-none bg-transparent"
+                appendTo="body">
                 <ng-template #selectedItem let-selectedOption>
                   <p-tag [value]="selectedOption.label" [severity]="getSeverity(selectedOption.label)" />
                 </ng-template>
@@ -128,7 +129,7 @@ interface Flight {
 
       <p-dialog header="Vincular a Calculadora" [(visible)]="destinosDialog" [modal]="true" [style]="{width: '350px'}">
         <div class="flex flex-col gap-4">
-            <p class="text-sm">Has marcado este vuelo como <b>Reservado</b>. ¿A qué destino quieres sumarlo como gasto?</p>
+            <p class="text-sm">Has marcado este vuelo como <b>Reservado</b>. ¿A qué destino quieres sumarlo como gasto de <b>Tiquetes</b>?</p>
             <p-select [options]="listaDestinos" [(ngModel)]="destinoSeleccionado" optionLabel="nombre" placeholder="Selecciona destino" styleClass="w-full" appendTo="body"></p-select>
             <p-button label="Confirmar Gasto" icon="pi pi-check" (onClick)="confirmarVinculacion()" [disabled]="!destinoSeleccionado"></p-button>
         </div>
@@ -138,18 +139,18 @@ interface Flight {
         <div class="flex flex-col gap-5 mt-2">
           <div class="grid grid-cols-2 gap-4">
             <div class="flex flex-col gap-2">
-              <label class="font-bold">Aerolínea</label>
+              <label class="font-bold text-sm">Aerolínea</label>
               <input pInputText [(ngModel)]="flight.airline" placeholder="Ej: Avianca" />
             </div>
             <div class="flex flex-col gap-2">
-              <label class="font-bold">Nº de Vuelo</label>
+              <label class="font-bold text-sm">Nº de Vuelo</label>
               <input pInputText [(ngModel)]="flight.flightNumber" placeholder="Ej: AV123" />
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-4">
             <div class="flex flex-col gap-2">
-              <label class="font-bold">Código Reserva</label>
+              <label class="font-bold text-sm">Código Reserva</label>
               <input pInputText [(ngModel)]="flight.bookingCode" placeholder="ABC123" />
             </div>
             <div class="flex items-center pt-8">
@@ -173,22 +174,22 @@ interface Flight {
 
           <div class="grid grid-cols-2 gap-4">
             <div class="flex flex-col gap-2">
-              <label class="font-bold">Origen</label>
+              <label class="font-bold text-sm">Origen</label>
               <input pInputText [(ngModel)]="flight.origin" />
             </div>
             <div class="flex flex-col gap-2">
-              <label class="font-bold">Destino</label>
+              <label class="font-bold text-sm">Destino</label>
               <input pInputText [(ngModel)]="flight.destination" />
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-4">
             <div class="flex flex-col gap-2">
-              <label class="font-bold">Fecha</label>
+              <label class="font-bold text-sm">Fecha</label>
               <p-datepicker [(ngModel)]="flight.date" dateFormat="dd/mm/yy" [showIcon]="true" appendTo="body" />
             </div>
             <div class="flex flex-col gap-2">
-              <label class="font-bold">Precio (USD)</label>
+              <label class="font-bold text-sm">Precio (USD)</label>
               <p-inputnumber [(ngModel)]="flight.price" mode="currency" currency="USD" />
             </div>
           </div>
@@ -229,7 +230,6 @@ export class Empty implements OnInit {
   private messageService = inject(MessageService);
   private confirmationService = inject(ConfirmationService);
 
-  // Escuchar cambios externos
   @HostListener('window:storage')
   onExternalUpdate() { this.loadFlights(); }
 
@@ -245,10 +245,15 @@ export class Empty implements OnInit {
   }
 
   onStatusChange(flight: Flight) {
-    if (flight.status === 'Reservado' && !flight.registradoEnCalculadora) {
-      this.abrirVinculacion(flight);
-    } else if (flight.status !== 'Reservado' && flight.registradoEnCalculadora) {
-      this.eliminarGastoDeCalculadora(flight);
+    if (flight.status === 'Reservado') {
+      if (!flight.registradoEnCalculadora) {
+        this.abrirVinculacion(flight);
+      }
+    } else {
+      // Si el estado ya no es Reservado, quitar de la calculadora
+      if (flight.registradoEnCalculadora) {
+        this.eliminarGastoDeCalculadora(flight);
+      }
     }
     this.saveToLocal();
   }
@@ -256,8 +261,10 @@ export class Empty implements OnInit {
   abrirVinculacion(flight: Flight) {
     const data = localStorage.getItem(this.LS_CALC);
     this.listaDestinos = data ? JSON.parse(data) : [];
+    
     if (this.listaDestinos.length === 0) {
       this.messageService.add({ severity: 'warn', summary: 'Info', detail: 'Crea un destino en la calculadora primero' });
+      flight.status = 'Visto';
       return;
     }
     this.vueloPendiente = flight;
@@ -274,6 +281,7 @@ export class Empty implements OnInit {
       const gastoId = Date.now();
       const nuevoGasto = {
         id: gastoId,
+        refId: this.vueloPendiente.id, // Referencia para borrado
         categoria: 'Vuelos',
         descripcion: `Ticket: ${this.vueloPendiente.airline} (${this.vueloPendiente.origin}-${this.vueloPendiente.destination})`,
         monto: this.vueloPendiente.price || 0
@@ -281,6 +289,7 @@ export class Empty implements OnInit {
 
       if (!dataCalculadora[index].gastos) dataCalculadora[index].gastos = [];
       dataCalculadora[index].gastos.push(nuevoGasto);
+      
       localStorage.setItem(this.LS_CALC, JSON.stringify(dataCalculadora));
       window.dispatchEvent(new Event('storage'));
 
@@ -293,14 +302,14 @@ export class Empty implements OnInit {
   }
 
   eliminarGastoDeCalculadora(flight: Flight) {
-    if (!flight.refGastoId) return;
     const dataCalculadora = JSON.parse(localStorage.getItem(this.LS_CALC) || '[]');
     let huboCambio = false;
 
     dataCalculadora.forEach((destino: any) => {
       if (destino.gastos) {
         const originalLen = destino.gastos.length;
-        destino.gastos = destino.gastos.filter((g: any) => g.id !== flight.refGastoId);
+        // Filtramos por refId o por refGastoId para asegurar limpieza
+        destino.gastos = destino.gastos.filter((g: any) => g.refId !== flight.id && g.id !== flight.refGastoId);
         if (destino.gastos.length !== originalLen) huboCambio = true;
       }
     });
@@ -308,9 +317,9 @@ export class Empty implements OnInit {
     if (huboCambio) {
       localStorage.setItem(this.LS_CALC, JSON.stringify(dataCalculadora));
       window.dispatchEvent(new Event('storage'));
-      flight.registradoEnCalculadora = false;
-      flight.refGastoId = undefined;
     }
+    flight.registradoEnCalculadora = false;
+    flight.refGastoId = undefined;
   }
 
   saveFlight() {
@@ -322,11 +331,19 @@ export class Empty implements OnInit {
       this.flight.id = Date.now();
       _flights.push(this.flight);
     }
+    
     this.flights.set(_flights);
     this.saveToLocal();
-    this.flightDialog = false;
+    
+    // Procesar estado si se guarda como Reservado
+    if (this.flight.status === 'Reservado') {
+        this.onStatusChange(this.flight);
+    } else if (this.flight.registradoEnCalculadora) {
+        this.eliminarGastoDeCalculadora(this.flight);
+    }
 
-    if (this.flight.status === 'Reservado') this.onStatusChange(this.flight);
+    this.flightDialog = false;
+    this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Vuelo guardado' });
   }
 
   deleteFlight(f: Flight) {

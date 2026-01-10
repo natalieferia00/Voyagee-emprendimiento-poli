@@ -51,7 +51,8 @@ export class AppMenu implements OnInit {
                 label: 'Utilidades',
                 items: [
                     { label: 'Lista de Viaje', icon: 'pi pi-fw pi-list', routerLink: ['/lista-viaje'] },
-                    { label: 'Notificaciones', icon: 'pi pi-fw pi-bell', routerLink: ['/crear-notificaciones'] }
+                    { label: 'Notificaciones', icon: 'pi pi-fw pi-bell', routerLink: ['/crear-notificaciones'] },
+                    { label: 'Configuración', icon: 'pi pi-fw pi-cog', routerLink: ['/presupuesto'] }
                 ]
             },
          

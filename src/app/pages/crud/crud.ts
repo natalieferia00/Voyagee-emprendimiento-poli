@@ -215,8 +215,16 @@ export class Crud implements OnInit {
     }
 
     onStatusChange(product: Product) {
-        if (product.inventoryStatus === 'Reservado' && !product.registradoEnCalculadora) {
-            this.abrirVinculacion(product);
+        if (product.inventoryStatus === 'Reservado') {
+            if (!product.registradoEnCalculadora) {
+                this.abrirVinculacion(product);
+            }
+        } else {
+            // Si cambia de Reservado a cualquier otro estado, eliminamos el gasto de la calculadora
+            if (product.registradoEnCalculadora) {
+                this.syncDeleteWithCalculadora([product.id]);
+                product.registradoEnCalculadora = false;
+            }
         }
         this.saveToLocal();
     }
@@ -227,6 +235,7 @@ export class Crud implements OnInit {
 
         if (this.listaDestinos.length === 0) {
             this.messageService.add({ severity: 'warn', summary: 'Info', detail: 'Crea un destino en la calculadora primero' });
+            product.inventoryStatus = 'Visto'; // Revertir si no hay destinos
             return;
         }
         this.alojamientoPendiente = product;
@@ -242,7 +251,7 @@ export class Crud implements OnInit {
         if (index !== -1) {
             const nuevoGasto = {
                 id: Date.now(),
-                refId: this.alojamientoPendiente.id, // REFERENCIA PARA BORRADO EN CADENA
+                refId: this.alojamientoPendiente.id, 
                 categoria: 'Hospedaje',
                 descripcion: `Reserva: ${this.alojamientoPendiente.name}`,
                 monto: this.alojamientoPendiente.price || 0
@@ -267,14 +276,14 @@ export class Crud implements OnInit {
         
         const dataActualizada = dataCalc.map((destino: any) => {
             if (destino.gastos) {
-                // Filtramos: Solo se quedan los gastos que NO tengan un refId incluido en la lista de IDs borrados
+                // Filtramos: Quitamos los gastos cuyo refId coincida con los productos eliminados
                 destino.gastos = destino.gastos.filter((gasto: any) => !idsParaBorrar.includes(gasto.refId));
             }
             return destino;
         });
 
         localStorage.setItem(this.LS_CALC, JSON.stringify(dataActualizada));
-        window.dispatchEvent(new Event('storage')); // Actualizar widgets
+        window.dispatchEvent(new Event('storage'));
     }
 
     deleteProduct(p: Product) {
@@ -283,13 +292,9 @@ export class Crud implements OnInit {
             header: 'Confirmar Eliminación',
             icon: 'pi pi-exclamation-triangle',
             accept: () => {
-                // 1. Borrar de la lista de alojamientos
                 this.products.set(this.products().filter((x) => x.id !== p.id));
                 this.saveToLocal();
-                
-                // 2. Borrar de la calculadora
                 this.syncDeleteWithCalculadora([p.id]);
-
                 this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Alojamiento y gastos eliminados' });
             }
         });
@@ -302,15 +307,10 @@ export class Crud implements OnInit {
             icon: 'pi pi-trash',
             accept: () => {
                 const idsParaBorrar = this.selectedProducts?.map(p => p.id) || [];
-                
-                // 1. Borrar de la lista local
                 this.products.set(this.products().filter((p) => !this.selectedProducts?.includes(p)));
                 this.selectedProducts = null;
                 this.saveToLocal();
-
-                // 2. Borrar de la calculadora
                 this.syncDeleteWithCalculadora(idsParaBorrar);
-
                 this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Seleccionados eliminados con éxito' });
             }
         });
@@ -327,10 +327,14 @@ export class Crud implements OnInit {
                 this.product.id = Math.random().toString(36).substring(2, 9);
                 _products.push(this.product);
             }
+            
             this.products.set(_products);
             this.saveToLocal();
             
-            if (this.product.inventoryStatus === 'Reservado') this.onStatusChange(this.product);
+            // Si el estado es Reservado al guardar, procesar vinculación
+            if (this.product.inventoryStatus === 'Reservado') {
+                this.onStatusChange(this.product);
+            }
             
             this.productDialog = false;
             this.product = {};
@@ -338,8 +342,8 @@ export class Crud implements OnInit {
         }
     }
 
-    // --- MÉTODOS DE APOYO ---
     calcularTotal() { return this.products().reduce((acc, p) => acc + (p.price || 0), 0); }
+    
     getSeverity(status: string) {
         switch (status) {
             case 'Reservado': return 'success';
@@ -349,6 +353,7 @@ export class Crud implements OnInit {
             default: return 'secondary';
         }
     }
+    
     openNew() { this.product = { inventoryStatus: 'Visto', rating: 0 }; this.submitted = false; this.productDialog = true; }
     editProduct(p: Product) { this.product = { ...p }; this.productDialog = true; }
     hideDialog() { this.productDialog = false; this.submitted = false; }
