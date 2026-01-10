@@ -38,8 +38,8 @@ export class AppMenu implements OnInit {
                         items: [
                             { label: 'Vuelos', icon: 'pi pi-fw pi-send', routerLink: ['/pages/empty'] },
                             { label: 'Alojamientos', icon: 'pi pi-fw pi-building', routerLink: ['/pages/crud'] },
-                            { label: 'Transporte', icon: 'pi pi-fw pi-car', routerLink: ['/gestion-transporte'] },
-                            { label: 'Alimentación', icon: 'pi pi-fw pi-coffee', routerLink: ['/gestion-alimentacion'] },
+                            { label: 'Transporte', icon: 'pi pi-fw pi-car', routerLink: ['/gestion-transporte'] }, 
+                            {   label: 'Alimentación',  icon: 'pi pi-shopping-cart',  routerLink: ['/gestion-alimentacion'] },
                             { label: 'Actividades y Excursiones', icon: 'pi pi-fw pi-sun', routerLink: ['/actividades-y-excursiones'] },
                              { label: 'Documentos', icon: 'pi pi-file', routerLink: ['/seguros'] },
                             { label: 'Presupuesto', icon: 'pi pi-fw pi-calculator', routerLink: ['/calculadora-gastos'] }
