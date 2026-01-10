@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 
@@ -13,7 +13,7 @@ import { ButtonModule } from 'primeng/button';
             <i class="pi pi-chart-bar text-muted-color text-xl"></i>
         </div>
         
-        <ul class="list-none p-0 m-0">
+        <ul class="list-none p-0 m-0" *ngIf="categorias.length > 0">
             <li *ngFor="let cat of categorias" class="flex flex-col mb-6">
                 <div class="flex justify-between mb-2">
                     <span class="text-surface-900 dark:text-surface-0 font-medium">{{ cat.nombre }}</span>
@@ -42,15 +42,23 @@ import { ButtonModule } from 'primeng/button';
 export class BestSellingWidget implements OnInit, OnDestroy {
     categorias: any[] = [];
     private readonly LS_KEY = 'app_presupuesto_sync';
+    private cdr = inject(ChangeDetectorRef);
+
+    // Definimos el listener como una propiedad para poder removerlo correctamente
+    private storageListener = () => this.cargarDatos();
 
     ngOnInit() {
         this.cargarDatos();
-        window.addEventListener('storage', () => this.cargarDatos());
+        // Escucha cambios de otras pestañas
+        window.addEventListener('storage', this.storageListener);
+        // Escucha cambios de la misma pestaña (Evento personalizado)
+        window.addEventListener('local-data-updated', this.storageListener);
     }
 
     cargarDatos() {
         const data = localStorage.getItem(this.LS_KEY);
         this.categorias = data ? JSON.parse(data) : [];
+        this.cdr.detectChanges(); // Forzamos la detección de cambios
     }
 
     getPorcentaje(cat: any): number {
@@ -63,9 +71,12 @@ export class BestSellingWidget implements OnInit, OnDestroy {
         return cat.gastado > cat.total;
     }
 
-    getTextColor(bg: string) { return bg.replace('bg-', 'text-'); }
+    getTextColor(bg: string) { 
+        return bg.replace('bg-', 'text-').replace('-500', '-600'); 
+    }
 
     ngOnDestroy() {
-        window.removeEventListener('storage', () => this.cargarDatos());
+        window.removeEventListener('storage', this.storageListener);
+        window.removeEventListener('local-data-updated', this.storageListener);
     }
 }

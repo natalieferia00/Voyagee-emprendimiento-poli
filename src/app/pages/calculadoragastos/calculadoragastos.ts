@@ -191,29 +191,38 @@ export class CalculadoraGastosComponent implements OnInit {
         this.recalcularTotales();
     }
 
-    actualizarTodo() {
-        localStorage.setItem(this.LS_KEY_DATA, JSON.stringify(this.destinos));
-        localStorage.setItem(this.LS_KEY_GLOBAL, JSON.stringify(this.presupuestoGlobal));
-        this.recalcularTotales();
-        window.dispatchEvent(new Event('storage'));
-    }
+    // Dentro de CalculadoraGastosComponent...
 
-    recalcularTotales() {
-        this.totalGastado = this.destinos.reduce((acc, d) => acc + this.sumarGastos(d), 0);
-        
-        const suma = (cat: string) => this.destinos.reduce((acc, d) => 
-            acc + (d.gastos || []).filter((g: any) => g.categoria === cat).reduce((s: number, g: any) => s + g.monto, 0), 0);
+actualizarTodo() {
+    localStorage.setItem(this.LS_KEY_DATA, JSON.stringify(this.destinos));
+    localStorage.setItem(this.LS_KEY_GLOBAL, JSON.stringify(this.presupuestoGlobal));
+    
+    this.recalcularTotales();
+    
+    // 1. Notifica a otras pestañas
+    window.dispatchEvent(new Event('storage'));
+    
+    // 2. Notifica a componentes en la misma pestaña (como el widget)
+    window.dispatchEvent(new Event('local-data-updated'));
+}
 
-        const dataWidget = [
-            { nombre: 'Tiquetes', color: 'bg-orange-500', gastado: suma('Vuelos'), total: this.presupuestoGlobal * 0.4 },
-            { nombre: 'Hospedaje', color: 'bg-purple-500', gastado: suma('Hospedaje'), total: this.presupuestoGlobal * 0.3 },
-            { nombre: 'Alimentación', color: 'bg-emerald-500', gastado: suma('Comida'), total: this.presupuestoGlobal * 0.2 },
-            { nombre: 'Otros', color: 'bg-slate-500', gastado: suma('Otros') + suma('Transporte'), total: this.presupuestoGlobal * 0.1 }
-        ];
+recalcularTotales() {
+    this.totalGastado = this.destinos.reduce((acc, d) => acc + this.sumarGastos(d), 0);
+    
+    const suma = (cat: string) => this.destinos.reduce((acc, d) => 
+        acc + (d.gastos || []).filter((g: any) => g.categoria === cat)
+        .reduce((s: number, g: any) => s + g.monto, 0), 0);
 
-        localStorage.setItem(this.LS_KEY_SYNC, JSON.stringify(dataWidget));
-    }
+    // Ajuste de porcentajes de presupuesto (Metas)
+    const dataWidget = [
+        { nombre: 'Tiquetes', color: 'bg-orange-500', gastado: suma('Vuelos'), total: this.presupuestoGlobal * 0.4 },
+        { nombre: 'Hospedaje', color: 'bg-purple-500', gastado: suma('Hospedaje'), total: this.presupuestoGlobal * 0.3 },
+        { nombre: 'Alimentación', color: 'bg-emerald-500', gastado: suma('Comida'), total: this.presupuestoGlobal * 0.2 },
+        { nombre: 'Otros/Transp.', color: 'bg-slate-500', gastado: suma('Otros') + suma('Transporte'), total: this.presupuestoGlobal * 0.1 }
+    ];
 
+    localStorage.setItem(this.LS_KEY_SYNC, JSON.stringify(dataWidget));
+}
     verDetalleDestino(d: any) {
         this.destinoActual = d;
         this.displayDetalle = true;
