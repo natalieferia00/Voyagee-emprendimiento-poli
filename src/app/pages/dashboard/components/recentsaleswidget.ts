@@ -33,7 +33,7 @@ interface Destino {
             <p-table [value]="destinations" [paginator]="true" [rows]="5" responsiveLayout="scroll" styleClass="p-datatable-sm">
                 <ng-template pTemplate="header">
                     <tr class="text-slate-400 text-xs uppercase">
-                        <th style="width: 4rem">Icono</th> 
+                        <th style="width: 4rem"></th> 
                         <th pSortableColumn="nombre">Destino <p-sortIcon field="nombre"></p-sortIcon></th>
                         <th>Estado Presupuesto</th>
                         <th pSortableColumn="montoTotal" class="text-right">Total Reservado <p-sortIcon field="montoTotal"></p-sortIcon></th>
