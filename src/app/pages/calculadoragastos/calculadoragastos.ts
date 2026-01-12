@@ -2,8 +2,6 @@ import { Component, OnInit, inject, HostListener } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MessageService, ConfirmationService } from 'primeng/api';
-
-/* PrimeNG */
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -191,7 +189,6 @@ export class CalculadoraGastosComponent implements OnInit {
         this.recalcularTotales();
     }
 
-    // Dentro de CalculadoraGastosComponent...
 
 actualizarTodo() {
     localStorage.setItem(this.LS_KEY_DATA, JSON.stringify(this.destinos));
@@ -199,10 +196,10 @@ actualizarTodo() {
     
     this.recalcularTotales();
     
-    // 1. Notifica a otras pestañas
+  
     window.dispatchEvent(new Event('storage'));
     
-    // 2. Notifica a componentes en la misma pestaña (como el widget)
+ 
     window.dispatchEvent(new Event('local-data-updated'));
 }
 
@@ -213,7 +210,7 @@ recalcularTotales() {
         acc + (d.gastos || []).filter((g: any) => g.categoria === cat)
         .reduce((s: number, g: any) => s + g.monto, 0), 0);
 
-    // Ajuste de porcentajes de presupuesto (Metas)
+ 
     const dataWidget = [
         { nombre: 'Tiquetes', color: 'bg-orange-500', gastado: suma('Vuelos'), total: this.presupuestoGlobal * 0.4 },
         { nombre: 'Hospedaje', color: 'bg-purple-500', gastado: suma('Hospedaje'), total: this.presupuestoGlobal * 0.3 },

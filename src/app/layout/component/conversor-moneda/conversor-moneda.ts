@@ -1,125 +1,108 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { ButtonModule } from 'primeng/button';
 
 @Component({
-    selector: 'app-conversor-moneda',
-    standalone: true,
-    imports: [CommonModule, FormsModule, InputNumberModule, ButtonModule],
-    template: `
-        <div class="flex flex-column gap-4 p-3">
-            <div class="flex flex-column gap-2">
-                <span class="text-900 font-semibold text-xl">Monto a Convertir</span>
-                <div class="flex flex-column gap-1">
-                    <label class="text-400 text-xs font-bold uppercase tracking-wider">Monto</label>
-                    <div class="p-inputgroup custom-input-wrapper">
-                        <span class="p-inputgroup-addon bg-transparent border-none text-900 font-bold pr-0">COP</span>
-                        <p-inputNumber 
-                            [(ngModel)]="montoCOP" 
-                            (onInput)="convertir()" 
-                            mode="decimal" 
-                            [minFractionDigits]="0"
-                            placeholder="0"
-                            class="w-full">
-                        </p-inputNumber>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex gap-2">
-                <button class="circle-btn"><i class="pi pi-info-circle"></i></button>
-                <button class="circle-btn"><i class="pi pi-arrow-down"></i></button>
-                <button class="circle-btn font-bold text-xs">41</button>
-            </div>
-
-            <div class="result-box p-4 border-round-xl border-1 surface-border">
-                <span class="block text-600 font-medium mb-2">Resultado estimado (USD)</span>
-                <div class="text-6xl font-bold text-900 mb-2">
-                    {{ montoUSD | currency:'USD':'symbol':'1.2-2' }}
-                </div>
-                <span class="text-500 text-sm">Tasa actual: <span class="text-900 font-medium">1 USD ≈ 3.950 COP</span></span>
-            </div>
-
-            <div class="flex align-items-center justify-content-between mt-2">
-                <div class="flex gap-2">
-                    <p-button label="Limpiar" icon="pi pi-trash" [text]="true" severity="secondary" (onClick)="limpiar()"></p-button>
-                    <p-button label="Historial" icon="pi pi-history" [text]="true" severity="secondary"></p-button>
-                </div>
-                <div class="flex gap-2">
-                    <p-button label="Buscar" icon="pi pi-search" styleClass="px-4 py-2"></p-button>
-                    <p-button label="Guardar" icon="pi pi-check-square" [outlined]="true" severity="secondary"></p-button>
-                </div>
-            </div>
+  selector: 'app-conversor-moneda',
+  standalone: true,
+  imports: [CommonModule, FormsModule, DialogModule, InputNumberModule, ButtonModule],
+  template: `
+    <p-dialog
+      header="Conversor de Moneda"
+      [(visible)]="visible"
+      [modal]="true"
+      [style]="{ width: '900px' }"
+      [contentStyle]="{'overflow': 'visible'}" 
+      [draggable]="false"
+      [resizable]="false"
+      appendTo="body"
+    >
+      <div class="flex flex-column gap-4 mt-2">
+        
+        <div class="flex flex-column gap-2">
+          <label class="font-semibold text-700">Monto en COP</label>
+          <p-inputNumber
+            [(ngModel)]="montoCOP"
+            name="cop"
+            (onInput)="convertir()"
+            placeholder="Ingrese valor"
+            class="w-full"
+            inputStyleClass="w-full p-3 border-round-lg text-lg font-bold"
+            [autofocus]="true"
+          ></p-inputNumber>
         </div>
-    `,
-    styles: [`
-        /* Contenedor del Input personalizado */
-        .custom-input-wrapper {
-            border: 1px solid var(--surface-border);
-            border-radius: 10px;
-            padding: 4px 12px;
-            background: #ffffff;
-            transition: border-color 0.2s;
-            &:focus-within {
-                border-color: var(--primary-color);
-            }
-        }
 
-        :host ::ng-deep .p-inputnumber-input {
-            border: none !important;
-            box-shadow: none !important;
-            font-size: 1.2rem;
-            font-weight: 500;
-            background: transparent;
-        }
+        <div class="flex align-items-center justify-content-center">
+            <i class="pi pi-arrow-down text-400"></i>
+        </div>
 
-        /* Botones circulares grises */
-        .circle-btn {
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            border: 1px solid var(--surface-border);
-            background: var(--surface-50);
-            color: var(--text-color-secondary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: background 0.2s;
-            &:hover {
-                background: var(--surface-100);
-            }
-        }
+        <div class="flex flex-column gap-2">
+          <label class="font-semibold text-700">Monto estimado en USD</label>
+          <p-inputNumber
+            [ngModel]="montoUSD"
+            name="usd"
+            mode="currency"
+            currency="USD"
+            [disabled]="true"
+            class="w-full"
+            inputStyleClass="w-full p-3 border-round-lg text-lg font-bold bg-gray-100"
+          ></p-inputNumber>
+        </div>
 
-        /* Caja de resultado */
-        .result-box {
-            background-color: var(--surface-50);
-        }
+        <div class="text-center py-2 bg-bluegray-50 border-round-md">
+           <small class="text-600">Tasa: 1 USD ≈ {{ tasaCambio | number }} COP</small>
+        </div>
 
-        /* Ajuste de escala para el texto grande */
-        .text-6xl {
-            font-size: 3.5rem;
-            letter-spacing: -2px;
-        }
-    `]
+        <div class="flex justify-content-end gap-2 mt-2">
+          <button
+            pButton
+            label="Cancelar"
+            class="p-button-text p-button-secondary"
+            (click)="visible=false"
+          ></button>
+
+          <button
+            pButton
+            label="Guardar"
+            icon="pi pi-check"
+            class="p-button-success"
+            (click)="visible=false"
+          ></button>
+        </div>
+      </div>
+    </p-dialog>
+  `,
+  styles: [`
+    /* Forzamos a que PrimeNG no oculte el contenido por error de cálculo */
+    :host ::ng-deep .p-inputnumber {
+        display: flex !important;
+        width: 100% !important;
+    }
+    
+    :host ::ng-deep .p-inputnumber-input {
+        width: 100% !important;
+        display: block !important;
+    }
+
+    :host ::ng-deep .p-dialog-content {
+        padding: 1.5rem !important;
+    }
+  `]
 })
 export class ConversorMonedaComponent {
-    montoCOP: number | null = null;
-    montoUSD: number = 0;
-    tasaCambio: number = 3950;
+  visible: boolean = true;
+  montoCOP: number | null = null;
+  montoUSD: number = 0;
+  tasaCambio: number = 3950;
 
-    convertir() {
-        if (this.montoCOP) {
-            this.montoUSD = this.montoCOP / this.tasaCambio;
-        } else {
-            this.montoUSD = 0;
-        }
+  convertir() {
+    if (this.montoCOP) {
+      this.montoUSD = this.montoCOP / this.tasaCambio;
+    } else {
+      this.montoUSD = 0;
     }
-
-    limpiar() {
-        this.montoCOP = null;
-        this.montoUSD = 0;
-    }
+  }
 }
