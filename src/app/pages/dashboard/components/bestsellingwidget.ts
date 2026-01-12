@@ -9,7 +9,7 @@ import { ButtonModule } from 'primeng/button';
     template: `
     <div class="card">
         <div class="flex justify-between items-center mb-6">
-            <div class="font-semibold text-xl">Estado de Presupuesto</div>
+            <div class="font-semibold text-xl">Estado de Presupuesto (distribución recomendada)</div>
             <i class="pi pi-chart-bar text-muted-color text-xl"></i>
         </div>
         
