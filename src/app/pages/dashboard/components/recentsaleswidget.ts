@@ -9,7 +9,7 @@ interface Gasto {
     categoria: string;
     descripcion: string;
     monto: number;
-    estado: string; // Importante para el filtro de la calculadora
+    estado: string; 
 }
 
 interface Destino {

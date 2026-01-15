@@ -32,12 +32,12 @@ export class AppMenu implements OnInit {
 
     model: MenuItem[] = [];
 
-    constructor(private router: Router) {}
+    constructor(private router: Router) { }
 
     ngOnInit(): void {
         this.model = [
 
-          
+
             {
                 label: 'Principal',
                 items: [
@@ -54,7 +54,7 @@ export class AppMenu implements OnInit {
                 ]
             },
 
-            
+
             {
                 label: 'Planificación Financiera',
                 items: [
@@ -96,14 +96,16 @@ export class AppMenu implements OnInit {
                             {
                                 label: 'Presupuesto',
                                 icon: 'pi pi-fw pi-calculator',
-                                routerLink: ['/calculadora-gastos']
+                                routerLink: ['/calculadora-gastos'],
+                                badge: 'Importante',
+                                badgeClass: 'p-badge-info'
                             }
                         ]
                     }
                 ]
             },
 
-         
+
             {
                 label: 'Utilidades',
                 items: [
@@ -118,14 +120,14 @@ export class AppMenu implements OnInit {
                         routerLink: ['/crear-notificaciones']
                     },
                     {
-                        label: 'Configuración',              
-                        icon: 'pi pi-fw pi-cog',             
-                        routerLink: ['/presupuesto']         
+                        label: 'Configuración',
+                        icon: 'pi pi-fw pi-cog',
+                        routerLink: ['/presupuesto']
                     }
                 ]
             },
 
-         
+
             {
                 label: 'Sesión',
                 items: [

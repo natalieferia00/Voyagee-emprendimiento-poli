@@ -3,3 +3,13 @@
 @use './layout/layout.scss';
 @use 'primeicons/primeicons.css';
 @use './demo/demo.scss';
+
+/* Ajuste para que la etiqueta sea pequeña y no afecte al texto del menú */
+.layout-menu .p-badge {
+    font-size: 0.65rem ; 
+    padding: 0 6px;
+    height: 1.2rem;
+    line-height: 1.2rem;
+    min-width: 1.2rem;
+    font-weight: 700;
+}
