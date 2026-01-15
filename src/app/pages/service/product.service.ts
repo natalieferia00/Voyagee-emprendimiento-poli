@@ -17,6 +17,7 @@ export interface Product {
     category?: string;
     image?: string;
     rating?: number;
+    tipoAlojamiento?: string;
 }
 
 @Injectable()
@@ -33,7 +34,8 @@ export class ProductService {
                 category: 'Hotel',
                 quantity: 24,
                 inventoryStatus: 'Visto',
-                rating: 5
+                rating: 5,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1001',
@@ -45,7 +47,8 @@ export class ProductService {
                 category: 'otro',
                 quantity: 61,
                 inventoryStatus: 'Reservado',
-                rating: 4
+                rating: 4,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1002',
@@ -57,7 +60,8 @@ export class ProductService {
                 category: 'Motel',
                 quantity: 2,
                 inventoryStatus: 'En proceso',
-                rating: 3
+                rating: 3,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1003',
@@ -69,7 +73,8 @@ export class ProductService {
                 category: 'Hotel',
                 quantity: 25,
                 inventoryStatus: 'Visto',
-                rating: 5
+                rating: 5,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1004',
@@ -81,7 +86,8 @@ export class ProductService {
                 category: 'Hotel',
                 quantity: 73,
                 inventoryStatus: 'Descartado',
-                rating: 4
+                rating: 4,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1005',
@@ -93,7 +99,8 @@ export class ProductService {
                 category: 'Motel',
                 quantity: 0,
                 inventoryStatus: 'Visto',
-                rating: 4
+                rating: 4,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1006',
@@ -105,7 +112,8 @@ export class ProductService {
                 category: 'Otro',
                 quantity: 5,
                 inventoryStatus: 'Descartado',
-                rating: 3
+                rating: 3,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1007',
@@ -117,7 +125,8 @@ export class ProductService {
                 category: 'Motel',
                 quantity: 23,
                 inventoryStatus: 'Visto',
-                rating: 5
+                rating: 5,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1008',
@@ -129,7 +138,8 @@ export class ProductService {
                 category: 'Otro',
                 quantity: 2,
                 inventoryStatus: 'En proceso',
-                rating: 4
+                rating: 4,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1009',
@@ -141,7 +151,8 @@ export class ProductService {
                 category: 'Casa',
                 quantity: 63,
                 inventoryStatus: 'Descartado',
-                rating: 3
+                rating: 3,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1010',
@@ -153,7 +164,8 @@ export class ProductService {
                 category: 'Hotel',
                 quantity: 0,
                 inventoryStatus: 'Reservado',
-                rating: 4
+                rating: 4,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1011',
@@ -165,7 +177,8 @@ export class ProductService {
                 category: 'Motel',
                 quantity: 23,
                 inventoryStatus: 'Reservado',
-                rating: 4
+                rating: 4,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1012',
@@ -177,7 +190,8 @@ export class ProductService {
                 category: 'Hotel',
                 quantity: 74,
                 inventoryStatus: 'Reservado',
-                rating: 5
+                rating: 5,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1013',
@@ -189,7 +203,8 @@ export class ProductService {
                 category: 'Casa',
                 quantity: 0,
                 inventoryStatus: 'Visto',
-                rating: 3
+                rating: 3,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1014',
@@ -201,7 +216,8 @@ export class ProductService {
                 category: 'Hotel',
                 quantity: 8,
                 inventoryStatus: 'Descartado',
-                rating: 5
+                rating: 5,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1015',
@@ -213,7 +229,8 @@ export class ProductService {
                 category: 'Casa',
                 quantity: 34,
                 inventoryStatus: 'Descartado',
-                rating: 4
+                rating: 4,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1016',
@@ -225,7 +242,8 @@ export class ProductService {
                 category: 'Hotel',
                 quantity: 12,
                 inventoryStatus: 'En proceso',
-                rating: 3
+                rating: 3,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1017',
@@ -237,7 +255,8 @@ export class ProductService {
                 category: 'Hotel',
                 quantity: 42,
                 inventoryStatus: 'Descartado',
-                rating: 4
+                rating: 4,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1018',
@@ -249,7 +268,8 @@ export class ProductService {
                 category: 'Casa',
                 quantity: 41,
                 inventoryStatus: 'En proceso',
-                rating: 5
+                rating: 5,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1019',
@@ -261,7 +281,8 @@ export class ProductService {
                 category: 'Motel',
                 quantity: 63,
                 inventoryStatus: 'En proceso',
-                rating: 4
+                rating: 4,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1020',
@@ -273,7 +294,8 @@ export class ProductService {
                 category: 'Otro',
                 quantity: 0,
                 inventoryStatus: 'Visto',
-                rating: 4
+                rating: 4,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1021',
@@ -285,7 +307,8 @@ export class ProductService {
                 category: 'Fitness',
                 quantity: 6,
                 inventoryStatus: 'Otro',
-                rating: 3
+                rating: 3,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1022',
@@ -297,7 +320,8 @@ export class ProductService {
                 category: 'Hotel',
                 quantity: 62,
                 inventoryStatus: 'Reservado',
-                rating: 4
+                rating: 4,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1023',
@@ -309,7 +333,8 @@ export class ProductService {
                 category: 'Otro',
                 quantity: 2,
                 inventoryStatus: 'En proceso',
-                rating: 5
+                rating: 5,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1024',
@@ -321,7 +346,8 @@ export class ProductService {
                 category: 'Hotel',
                 quantity: 0,
                 inventoryStatus: 'Visto',
-                rating: 4
+                rating: 4,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1025',
@@ -333,7 +359,8 @@ export class ProductService {
                 category: 'Casa',
                 quantity: 52,
                 inventoryStatus: 'En proceso',
-                rating: 4
+                rating: 4,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1026',
@@ -345,7 +372,8 @@ export class ProductService {
                 category: 'Hotel',
                 quantity: 3,
                 inventoryStatus: 'Reservado',
-                rating: 3
+                rating: 3,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1027',
@@ -357,7 +385,8 @@ export class ProductService {
                 category: 'Casa',
                 quantity: 35,
                 inventoryStatus: 'Visto',
-                rating: 3
+                rating: 3,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1028',
@@ -369,7 +398,8 @@ export class ProductService {
                 category: 'Motel',
                 quantity: 15,
                 inventoryStatus: 'En proceso',
-                rating: 5
+                rating: 5,
+                tipoAlojamiento: 'Hotel'
             },
             {
                 id: '1029',
@@ -381,7 +411,8 @@ export class ProductService {
                 category: 'Visto',
                 quantity: 25,
                 inventoryStatus: 'Descartado',
-                rating: 8
+                rating: 8,
+                tipoAlojamiento: 'Hotel'
             }
         ];
     }
@@ -1255,7 +1286,7 @@ export class ProductService {
         'Yoga Set'
     ];
 
-    constructor(private http: HttpClient) {}
+    constructor(private http: HttpClient) { }
 
     getProductsMini() {
         return Promise.resolve(this.getProductsData().slice(0, 5));

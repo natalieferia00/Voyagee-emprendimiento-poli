@@ -1,66 +1,61 @@
-<p-card [style]="{ width: '23rem' }" styleClass="surface-card shadow-3 border-round-xl p-4">
-    <ng-template pTemplate="header">
-        <div class="flex align-items-center justify-content-center mb-3">
-            <i class="pi pi-user text-4xl text-primary"></i>
-        </div>
-    </ng-template>
-
-    <ng-template pTemplate="title">
-        <div class="text-center mb-3">
-            <h2 class="text-lg font-semibold text-color mb-1">
+<p-card styleClass="border-none shadow-none bg-transparent">
+    <div *ngIf="tieneInformacion && datosPerfil" class="flex flex-column">
+        
+        <div class="mb-5">
+            <h2 class="text-900 font-bold text-3xl m-0 tracking-tight">
                 {{ datosPerfil.nombreUsuario }}
             </h2>
-            <p class="text-sm text-secondary m-0">
+            <p class="text-500 m-0 mt-1 font-medium text-sm">
                 {{ datosPerfil.correoUsuario }}
             </p>
         </div>
-    </ng-template>
 
-    <div class="info-grid">
-        <div class="info-item">
-            <span class="label">Estado:</span>
-            <span
-                class="value"
-                [ngClass]="{
-                    'text-green-600': datosPerfil.estadoActivo,
-                    'text-red-500': !datosPerfil.estadoActivo
-                }"
-            >
-                {{ datosPerfil.estadoActivo ? 'Activo' : 'Inactivo' }}
-            </span>
+        <div class="border-top-1 surface-border w-full mb-5"></div>
+
+        <div class="flex flex-column gap-5">
+            
+            <div>
+                <label class="block text-400 font-bold text-xs uppercase mb-2">Presupuesto</label>
+                <div class="flex align-items-baseline gap-2">
+                    <span class="text-4xl font-light text-900">
+                        {{ datosPerfil.presupuestoTotal | currency: datosPerfil.moneda }}
+                    </span>
+                    <span class="text-300 text-sm font-bold">{{ datosPerfil.moneda }}</span>
+                </div>
+            </div>
+
+            <div class="grid grid-nogutter">
+                <div class="col-6">
+                    <label class="block text-400 font-bold text-xs uppercase mb-1">Próximo Viaje</label>
+                    <span class="text-700 font-medium">{{ datosPerfil.fechaInicioViaje }}</span>
+                </div>
+                <div class="col-6">
+                    <label class="block text-400 font-bold text-xs uppercase mb-1">Inversión Top</label>
+                    <span class="text-700 font-medium">{{ datosPerfil.destinoPrincipal }}</span>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-400 font-bold text-xs uppercase mb-1">Última Sincronización</label>
+                <span class="text-400 text-xs italic">{{ datosPerfil.ultimoIngreso }}</span>
+            </div>
         </div>
 
-        <div class="info-item">
-            <span class="label">Fecha de creación:</span>
-            <span class="value">{{ datosPerfil.fechaCreacion }}</span>
-        </div>
-
-        <div class="info-item">
-            <span class="label">Último ingreso:</span>
-            <span class="value">{{ datosPerfil.ultimoIngreso }}</span>
-        </div>
-
-        <div class="info-item">
-            <span class="label">Inicio del viaje:</span>
-            <span class="value">{{ datosPerfil.fechaInicioViaje }}</span>
-        </div>
-
-        <div class="info-item">
-            <span class="label">Presupuesto total:</span>
-            <span class="value text-primary font-semibold">
-                {{ datosPerfil.presupuestoTotal }}
-            </span>
+        <div class="mt-6">
+            <p-button 
+                label="Editar cuenta" 
+                icon="pi pi-arrow-right" 
+                iconPos="right"
+                [text]="true"
+                styleClass="p-0 text-900 font-bold hover:underline" 
+                (onClick)="irAConfiguracion()">
+            </p-button>
         </div>
     </div>
 
-    <ng-template pTemplate="footer">
-        <div class="flex justify-content-center mt-4">
-            <button
-                pButton
-                label="Editar perfil"
-                icon="pi pi-pencil"
-                class="p-button-sm p-button-rounded p-button-outlined"
-            ></button>
-        </div>
-    </ng-template>
+    <div *ngIf="!tieneInformacion" class="py-6">
+        <h3 class="text-900 font-bold mb-2">Perfil incompleto</h3>
+        <p class="text-500 mb-4">Configura tu cuenta para ver el resumen.</p>
+        <p-button label="Configurar" [text]="true" icon="pi pi-plus" (onClick)="irAConfiguracion()"></p-button>
+    </div>
 </p-card>

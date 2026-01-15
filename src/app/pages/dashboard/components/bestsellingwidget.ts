@@ -1,101 +1,82 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
-import { MenuModule } from 'primeng/menu';
 
 @Component({
     standalone: true,
     selector: 'app-best-selling-widget',
-    imports: [CommonModule, ButtonModule, MenuModule],
-    template: ` <div class="card">
+    imports: [CommonModule, ButtonModule],
+    template: `
+    <div class="card">
         <div class="flex justify-between items-center mb-6">
-            <div class="font-semibold text-xl">Avance del viaje</div>
-            <div>
-                <button pButton type="button" icon="pi pi-ellipsis-v" class="p-button-rounded p-button-text p-button-plain" (click)="menu.toggle($event)"></button>
-                <p-menu #menu [popup]="true" [model]="items"></p-menu>
-            </div>
+            <div class="font-semibold text-xl">Estado de Presupuesto (distribución recomendada)</div>
+            <i class="pi pi-chart-bar text-muted-color text-xl"></i>
         </div>
-        <ul class="list-none p-0 m-0">
-            <li class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                <div>
-                    <span class="text-surface-900 dark:text-surface-0 font-medium mr-2 mb-1 md:mb-0">Tiquetes</span>
-                    <div class="mt-1 text-muted-color">tiquetes de viaje</div>
+        
+        <ul class="list-none p-0 m-0" *ngIf="categorias.length > 0">
+            <li *ngFor="let cat of categorias" class="flex flex-col mb-6">
+                <div class="flex justify-between mb-2">
+                    <span class="text-surface-900 dark:text-surface-0 font-medium">{{ cat.nombre }}</span>
+                    <span [class]="'font-bold ' + (esExceso(cat) ? 'text-red-500' : getTextColor(cat.color))">
+                        {{ getPorcentaje(cat) }}%
+                    </span>
                 </div>
-                <div class="mt-2 md:mt-0 flex items-center">
-                    <div class="bg-surface-300 dark:bg-surface-500 rounded-border overflow-hidden w-40 lg:w-24" style="height: 8px">
-                        <div class="bg-orange-500 h-full" style="width: 50%"></div>
-                    </div>
-                    <span class="text-orange-500 ml-4 font-medium">%50</span>
+                
+                <div class="bg-surface-300 dark:bg-surface-500 rounded-full overflow-hidden w-full" style="height: 10px">
+                    <div [class]="'h-full transition-all duration-500 ' + (esExceso(cat) ? 'bg-red-500' : cat.color)" 
+                         [style.width]="getPorcentaje(cat) + '%'"></div>
                 </div>
-            </li>
-            <li class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                <div>
-                    <span class="text-surface-900 dark:text-surface-0 font-medium mr-2 mb-1 md:mb-0">Alimentacion</span>
-                    <div class="mt-1 text-muted-color">plan de comidas</div>
-                </div>
-                <div class="mt-2 md:mt-0 ml-0 md:ml-20 flex items-center">
-                    <div class="bg-surface-300 dark:bg-surface-500 rounded-border overflow-hidden w-40 lg:w-24" style="height: 8px">
-                        <div class="bg-cyan-500 h-full" style="width: 16%"></div>
-                    </div>
-                    <span class="text-cyan-500 ml-4 font-medium">%16</span>
-                </div>
-            </li>
-            <li class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                <div>
-                    <span class="text-surface-900 dark:text-surface-0 font-medium mr-2 mb-1 md:mb-0">Hospedaje</span>
-                    <div class="mt-1 text-muted-color">Hoteles, hostales, etc</div>
-                </div>
-                <div class="mt-2 md:mt-0 ml-0 md:ml-20 flex items-center">
-                    <div class="bg-surface-300 dark:bg-surface-500 rounded-border overflow-hidden w-40 lg:w-24" style="height: 8px">
-                        <div class="bg-pink-500 h-full" style="width: 67%"></div>
-                    </div>
-                    <span class="text-pink-500 ml-4 font-medium">%67</span>
-                </div>
-            </li>
-            <li class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                <div>
-                    <span class="text-surface-900 dark:text-surface-0 font-medium mr-2 mb-1 md:mb-0">Seguros</span>
-                    <div class="mt-1 text-muted-color">seguros de viaje</div>
-                </div>
-                <div class="mt-2 md:mt-0 ml-0 md:ml-20 flex items-center">
-                    <div class="bg-surface-300 dark:bg-surface-500 rounded-border overflow-hidden w-40 lg:w-24" style="height: 8px">
-                        <div class="bg-green-500 h-full" style="width: 35%"></div>
-                    </div>
-                    <span class="text-primary ml-4 font-medium">%35</span>
-                </div>
-            </li>
-            <li class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                <div>
-                    <span class="text-surface-900 dark:text-surface-0 font-medium mr-2 mb-1 md:mb-0">Equipaje</span>
-                    <div class="mt-1 text-muted-color">checklist esquipaje</div>
-                </div>
-                <div class="mt-2 md:mt-0 ml-0 md:ml-20 flex items-center">
-                    <div class="bg-surface-300 dark:bg-surface-500 rounded-border overflow-hidden w-40 lg:w-24" style="height: 8px">
-                        <div class="bg-purple-500 h-full" style="width: 75%"></div>
-                    </div>
-                    <span class="text-purple-500 ml-4 font-medium">%75</span>
-                </div>
-            </li>
-            <li class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                <div>
-                    <span class="text-surface-900 dark:text-surface-0 font-medium mr-2 mb-1 md:mb-0">Otros</span>
-                    <div class="mt-1 text-muted-color">Otros</div>
-                </div>
-                <div class="mt-2 md:mt-0 ml-0 md:ml-20 flex items-center">
-                    <div class="bg-surface-300 dark:bg-surface-500 rounded-border overflow-hidden w-40 lg:w-24" style="height: 8px">
-                        <div class="bg-teal-500 h-full" style="width: 40%"></div>
-                    </div>
-                    <span class="text-teal-500 ml-4 font-medium">%40</span>
+                
+                <div class="flex justify-between mt-1 text-xs text-muted-color">
+                    <span>Gastado: {{ cat.gastado | currency:'USD' }}</span>
+                    <span>Meta: {{ cat.total | currency:'USD' }}</span>
                 </div>
             </li>
         </ul>
+
+        <div *ngIf="categorias.length === 0" class="text-center p-8 border-2 border-dashed border-surface rounded-xl">
+            <p class="text-muted-color">Define un presupuesto en la calculadora para ver el avance.</p>
+        </div>
     </div>`
 })
-export class BestSellingWidget {
-    menu = null;
+export class BestSellingWidget implements OnInit, OnDestroy {
+    categorias: any[] = [];
+    private readonly LS_KEY = 'app_presupuesto_sync';
+    private cdr = inject(ChangeDetectorRef);
 
-    items = [
-        { label: 'Add New', icon: 'pi pi-fw pi-plus' },
-        { label: 'Remove', icon: 'pi pi-fw pi-trash' }
-    ];
+    // Definimos el listener como una propiedad para poder removerlo correctamente
+    private storageListener = () => this.cargarDatos();
+
+    ngOnInit() {
+        this.cargarDatos();
+        // Escucha cambios de otras pestañas
+        window.addEventListener('storage', this.storageListener);
+        // Escucha cambios de la misma pestaña (Evento personalizado)
+        window.addEventListener('local-data-updated', this.storageListener);
+    }
+
+    cargarDatos() {
+        const data = localStorage.getItem(this.LS_KEY);
+        this.categorias = data ? JSON.parse(data) : [];
+        this.cdr.detectChanges(); // Forzamos la detección de cambios
+    }
+
+    getPorcentaje(cat: any): number {
+        if (!cat.total || cat.total === 0) return 0;
+        const p = Math.round((cat.gastado / cat.total) * 100);
+        return p > 100 ? 100 : p;
+    }
+
+    esExceso(cat: any): boolean {
+        return cat.gastado > cat.total;
+    }
+
+    getTextColor(bg: string) { 
+        return bg.replace('bg-', 'text-').replace('-500', '-600'); 
+    }
+
+    ngOnDestroy() {
+        window.removeEventListener('storage', this.storageListener);
+        window.removeEventListener('local-data-updated', this.storageListener);
+    }
 }

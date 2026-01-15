@@ -1,14 +1,13 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { TreeNode } from 'primeng/api';
-import { TreeModule } from 'primeng/tree';
-import { FormsModule } from '@angular/forms';
 import { TreeTableModule } from 'primeng/treetable';
+import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { NodeService } from '../service/node.service';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { ToolbarModule } from 'primeng/toolbar';
+import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'app-lista-viaje',
@@ -16,147 +15,190 @@ import { ToolbarModule } from 'primeng/toolbar';
   imports: [
     CommonModule,
     FormsModule,
-    TreeModule,
     TreeTableModule,
     ButtonModule,
     DialogModule,
     InputTextModule,
-    ToolbarModule
+    ToolbarModule,
+    TooltipModule
   ],
   template: `
     <div class="card">
-      <!-- Encabezado con Toolbar -->
       <p-toolbar styleClass="mb-4">
         <div class="p-toolbar-group-left">
-          <h2 class="font-semibold text-xl m-0">Lista de Viaje</h2>
+          <h2 class="font-semibold text-xl m-0">Checklist Equipaje</h2>
         </div>
         <div class="p-toolbar-group-right">
           <p-button
             icon="pi pi-plus"
-            label="Agregar"
+            label="Agregar Artículo"
             styleClass="p-button-success"
             (click)="showForm()"
           ></p-button>
         </div>
       </p-toolbar>
 
-     
-    <!-- Tabla tipo árbol -->
-    <div class="card mt-4">
-      <div class="font-semibold text-lg mb-3">TreeTable</div>
-      <p-treetable 
-        [value]="treeTableValue" 
-        [columns]="cols"
-        selectionMode="checkbox" 
-        [(selectionKeys)]="selectedTreeTableValue"
-        dataKey="key"
-        [scrollable]="true" 
-        [tableStyle]="{ 'min-width': '50rem' }">
+      <div class="card mt-4 p-0">
+        <p-treeTable 
+          [value]="treeTableValue" 
+          [columns]="cols"
+          selectionMode="checkbox" 
+          [(selectionKeys)]="selectedTreeTableValue"
+          (selectionKeysChange)="saveToLocalStorage()"
+          dataKey="key"
+          [scrollable]="true" 
+          [tableStyle]="{ 'min-width': '40rem' }">
 
-        <ng-template #header let-columns>
-          <tr>
-            <th *ngFor="let col of columns">
-              {{ col.header }}
-            </th>
-          </tr>
-        </ng-template>
+          <ng-template pTemplate="header" let-columns>
+            <tr>
+              <th *ngFor="let col of columns">
+                {{ col.header }}
+              </th>
+              <th style="width: 8rem" class="text-center">Acciones</th>
+            </tr>
+          </ng-template>
 
-        <ng-template #body let-rowNode let-rowData="rowData" let-columns="columns">
-          <tr [ttRow]="rowNode" [ttSelectableRow]="rowNode">
-            <td *ngFor="let col of columns; let i = index">
-              <span class="flex items-center gap-2">
-                <p-treeTableToggler [rowNode]="rowNode" *ngIf="i === 0"></p-treeTableToggler>
-                <p-treeTableCheckbox [value]="rowNode" *ngIf="i === 0"></p-treeTableCheckbox>
-                {{ rowData[col.field] }}
-              </span>
-            </td>
-          </tr>
-        </ng-template>
+          <ng-template pTemplate="body" let-rowNode let-rowData="rowData" let-columns="columns">
+            <tr [ttRow]="rowNode">
+              <td *ngFor="let col of columns; let i = index">
+                <span class="flex items-center gap-2">
+                  <p-treeTableCheckbox [value]="rowNode" *ngIf="i === 0"></p-treeTableCheckbox>
+                  
+                  <span [ngClass]="{'line-through text-muted-color': isSelected(rowNode.node.key)}">
+                    {{ rowData[col.field] }}
+                  </span>
+                </span>
+              </td>
+              <td class="text-center">
+                <div class="flex justify-center gap-1">
+                  <p-button icon="pi pi-pencil" styleClass="p-button-text p-button-warning p-button-sm" (click)="editNode(rowNode.node)"></p-button>
+                  <p-button icon="pi pi-trash" styleClass="p-button-text p-button-danger p-button-sm" (click)="deleteNode(rowNode.node)"></p-button>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
 
-      </p-treetable>
-    </div>
-
-    <!-- Diálogo para agregar nuevo nodo -->
-    <p-dialog
-      header="Agregar nuevo Objeto"
-      [(visible)]="displayForm"
-      [modal]="true"
-      [closable]="true"
-      [style]="{ width: '15rem' }"
-    >
-      <div class="flex flex-col gap-3">
-        <div>
-          <label class="block mb-1 font-medium">Objeto</label>
-          <input pInputText type="text" [(ngModel)]="newNode.name" placeholder="Ej: camara" />
-        </div>
-
-        <div>
-          <label class="block mb-1 font-medium">Tipo</label>
-          <input pInputText type="text" [(ngModel)]="newNode.size" placeholder="Ej: tecnologia" />
-        </div>
-
-        <div>
-          <label class="block mb-1 font-medium">Descripción</label>
-          <input pInputText type="text" [(ngModel)]="newNode.type" placeholder="Ej: camara digital" />
-        </div>
-
-        <div class="flex justify-end gap-2 mt-3">
-          <p-button label="Cancelar" styleClass="p-button-text" (click)="displayForm = false"></p-button>
-          <p-button label="Guardar" icon="pi pi-check" (click)="addNode()"></p-button>
-        </div>
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td [attr.colspan]="cols.length + 1" class="text-center p-5 text-muted-color">
+                No hay artículos en tu maleta. ¡Agrega el primero!
+              </td>
+            </tr>
+          </ng-template>
+        </p-treeTable>
       </div>
-    </p-dialog>
-  `,
-  styleUrls: ['./lista-viaje.scss'],
-  providers: [NodeService]
+
+      <p-dialog
+        [header]="isEditing ? 'Editar Artículo' : 'Nuevo Artículo'"
+        [(visible)]="displayForm"
+        [modal]="true"
+        [style]="{ width: '22rem' }"
+        [draggable]="false"
+        [resizable]="false"
+      >
+        <div class="flex flex-col gap-4 mt-2">
+          <div class="flex flex-col gap-1">
+            <label for="name" class="font-medium">¿Qué llevas?</label>
+            <input pInputText id="name" [(ngModel)]="newNode.name" placeholder="Ej. Pasaporte, Camisas..." />
+          </div>
+          <div class="flex flex-col gap-1">
+            <label for="size" class="font-medium">Cantidad</label>
+            <input pInputText id="size" [(ngModel)]="newNode.size" placeholder="Ej. 1, 3 pares..." />
+          </div>
+          <div class="flex flex-col gap-1">
+            <label for="type" class="font-medium">Nota / Categoría</label>
+            <input pInputText id="type" [(ngModel)]="newNode.type" placeholder="Ej. Importante, Ropa..." />
+          </div>
+        </div>
+        <ng-template pTemplate="footer">
+            <p-button label="Cancelar" styleClass="p-button-text" (click)="displayForm = false"></p-button>
+            <p-button label="Guardar" icon="pi pi-check" (click)="saveNode()" [disabled]="!newNode.name"></p-button>
+        </ng-template>
+      </p-dialog>
+    </div>
+  `
 })
 export class ListaViajeComponent implements OnInit {
-  treeValue: TreeNode[] = [];
   treeTableValue: TreeNode[] = [];
-  selectedTreeValue: TreeNode[] = [];
   selectedTreeTableValue: any = {};
   cols: any[] = [];
+  displayForm = false;
+  isEditing = false;
+  selectedNode: TreeNode | null = null;
 
-  displayForm = false; 
+  newNode = { name: '', size: '', type: '' };
 
-  newNode = {
-    name: '',
-    size: '',
-    type: ''
-  };
-
-  private nodeService = inject(NodeService);
+  private readonly LS_ITEMS_KEY = 'checklist_viaje_items';
+  private readonly LS_SELECTED_KEY = 'checklist_viaje_selected';
 
   ngOnInit() {
-    this.nodeService.getFiles().then((files) => (this.treeValue = files));
-    this.nodeService.getTreeTableNodes().then((files: any) => (this.treeTableValue = files));
-
     this.cols = [
-      { field: 'name', header: 'Name' },
-      { field: 'size', header: 'Size' },
-      { field: 'type', header: 'Type' }
+      { field: 'name', header: 'Artículo' },
+      { field: 'size', header: 'Cant.' },
+      { field: 'type', header: 'Nota' }
     ];
+    this.loadFromLocalStorage();
+  }
 
-    this.selectedTreeTableValue = {
-      '0-0': { partialChecked: false, checked: true }
-    };
+  loadFromLocalStorage() {
+    const savedItems = localStorage.getItem(this.LS_ITEMS_KEY);
+    const savedSelected = localStorage.getItem(this.LS_SELECTED_KEY);
+
+    if (savedItems) {
+      this.treeTableValue = JSON.parse(savedItems);
+    }
+    
+    if (savedSelected) {
+      this.selectedTreeTableValue = JSON.parse(savedSelected);
+    }
+  }
+
+  saveToLocalStorage() {
+    localStorage.setItem(this.LS_ITEMS_KEY, JSON.stringify(this.treeTableValue));
+    localStorage.setItem(this.LS_SELECTED_KEY, JSON.stringify(this.selectedTreeTableValue));
   }
 
   showForm() {
+    this.isEditing = false;
+    this.newNode = { name: '', size: '', type: '' };
     this.displayForm = true;
   }
 
-  addNode() {
-    if (this.newNode.name.trim()) {
+  editNode(node: TreeNode) {
+    this.isEditing = true;
+    this.selectedNode = node;
+    this.newNode = { ...node.data };
+    this.displayForm = true;
+  }
+
+  saveNode() {
+    if (this.isEditing && this.selectedNode) {
+      this.selectedNode.data = { ...this.newNode };
+    } else {
       const newItem: TreeNode = {
+        key: 'item_' + Date.now(),
         data: { ...this.newNode },
         children: []
       };
-
-      this.treeValue.push(newItem);
-
-      this.newNode = { name: '', size: '', type: '' };
-      this.displayForm = false;
+      this.treeTableValue = [...this.treeTableValue, newItem];
     }
+    this.saveToLocalStorage();
+    this.displayForm = false;
+  }
+
+  deleteNode(node: TreeNode) {
+    this.treeTableValue = this.treeTableValue.filter(n => n.key !== node.key);
+    
+    // Limpiar selección si se elimina
+    if (node.key && this.selectedTreeTableValue[node.key]) {
+        delete this.selectedTreeTableValue[node.key];
+        this.selectedTreeTableValue = { ...this.selectedTreeTableValue };
+    }
+    
+    this.saveToLocalStorage();
+  }
+
+  isSelected(key: string | undefined): boolean {
+    return !!(key && this.selectedTreeTableValue[key]?.checked);
   }
 }

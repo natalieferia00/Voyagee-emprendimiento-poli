@@ -1,245 +1,376 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, signal, HostListener, inject } from '@angular/core';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import { InputTextModule } from 'primeng/inputtext';
-import { MultiSelectModule } from 'primeng/multiselect';
-import { SelectModule } from 'primeng/select';
-import { SliderModule } from 'primeng/slider';
-import { Table, TableModule } from 'primeng/table';
-import { ProgressBarModule } from 'primeng/progressbar';
-import { ToggleButtonModule } from 'primeng/togglebutton';
-import { ToastModule } from 'primeng/toast';
-import { CommonModule } from '@angular/common';
+import { CommonModule, CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+
+/* PrimeNG Full Stack */
+import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
-import { RatingModule } from 'primeng/rating';
 import { RippleModule } from 'primeng/ripple';
-import { InputIconModule } from 'primeng/inputicon';
-import { IconFieldModule } from 'primeng/iconfield';
+import { ToastModule } from 'primeng/toast';
+import { ToolbarModule } from 'primeng/toolbar';
+import { InputTextModule } from 'primeng/inputtext';
+import { TextareaModule } from 'primeng/textarea';
+import { SelectModule } from 'primeng/select';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { DialogModule } from 'primeng/dialog';
 import { TagModule } from 'primeng/tag';
-import { ObjectUtils } from 'primeng/utils';
+import { TooltipModule } from 'primeng/tooltip';
+import { CheckboxModule } from 'primeng/checkbox';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { DatePickerModule } from 'primeng/datepicker';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
-// ✈️ Interfaz base para un vuelo
 interface Flight {
-  id: number;
-  flightNumber: string;
-  origin: string;
-  destination: string;
-  date: string;
-  price: number;
-  status: string;
-  description: string;
-  progress: number;
-  url: string; // ✅ Nuevo campo para la URL
-}
-
-// ✅ Extendemos para incluir la fecha convertida
-interface FlightWithParsedDate extends Flight {
-  parsedDate?: Date;
+  id?: number;
+  flightNumber?: string;
+  airline?: string;
+  bookingCode?: string;
+  hasLayovers?: boolean;
+  layoverCount?: number;
+  includesBaggage?: boolean;
+  origin?: string;
+  destination?: string;
+  date?: Date | string;
+  price?: number;
+  status?: string;
+  description?: string;
+  url?: string;
+  registradoEnCalculadora?: boolean;
+  refGastoId?: number; 
 }
 
 @Component({
-  selector: 'app-empty',
+  selector: 'app-vuelos',
   standalone: true,
   imports: [
-    TableModule,
-    MultiSelectModule,
-    SelectModule,
-    InputIconModule,
-    TagModule,
-    InputTextModule,
-    SliderModule,
-    ProgressBarModule,
-    ToggleButtonModule,
-    ToastModule,
-    CommonModule,
-    FormsModule,
-    ButtonModule,
-    RatingModule,
-    RippleModule,
-    IconFieldModule
+    CommonModule, FormsModule, TableModule, TagModule, InputTextModule, 
+    ButtonModule, RippleModule, ToastModule, ToolbarModule, SelectModule, 
+    InputNumberModule, DialogModule, ConfirmDialogModule, TextareaModule, 
+    DatePickerModule, ToggleSwitchModule, CheckboxModule, TooltipModule
   ],
+  providers: [ConfirmationService, MessageService, CurrencyPipe],
   template: `
+    <p-toast />
+    <p-confirmdialog />
+
     <div class="card">
-      <div class="font-semibold text-xl mb-4">Gestión de Vuelos</div>
+      <div class="flex justify-between items-center mb-4">
+          <div class="font-semibold text-xl text-800">Gestión de Vuelos</div>
+          <p-tag severity="contrast" [style]="{'font-size': '1.1rem', 'padding': '8px 15px'}" 
+                 [value]="'Inversión Vuelos: ' + (calcularTotal() | currency:'USD':'symbol':'1.0-2')" />
+      </div>
 
-      <p-table
-        #dt1
-        [value]="flights"
-        dataKey="id"
-        [rows]="10"
-        [loading]="loading"
-        [rowHover]="true"
-        [showGridlines]="true"
-        [paginator]="true"
-        [globalFilterFields]="['flightNumber', 'origin', 'destination', 'status']"
-        responsiveLayout="scroll"
-      >
-        <ng-template #caption>
-          <div class="flex justify-between items-center flex-column sm:flex-row">
-            <button
-              pButton
-              label="Limpiar"
-              class="p-button-outlined mb-2"
-              icon="pi pi-filter-slash"
-              (click)="clear(dt1)"
-            ></button>
-            <p-iconfield iconPosition="left" class="ml-auto">
-              <p-inputicon>
-                <i class="pi pi-search"></i>
-              </p-inputicon>
-              <input
-                pInputText
-                type="text"
-                (input)="onGlobalFilter(dt1, $event)"
-                placeholder="Buscar vuelo..."
-              />
-            </p-iconfield>
-          </div>
+      <p-toolbar styleClass="mb-6">
+        <ng-template #start>
+          <p-button label="Nuevo Vuelo" icon="pi pi-plus" severity="success" (onClick)="openNew()" />
         </ng-template>
+      </p-toolbar>
 
+      <p-table [value]="flights()" [rows]="10" [paginator]="true" [rowHover]="true" responsiveLayout="scroll">
         <ng-template #header>
           <tr>
-            <th>Número</th>
-            <th>Origen</th>
-            <th>Destino</th>
+            <th>Vuelo / Aerolínea</th>
+            <th>Ruta</th>
+            <th>Escalas</th>
+            <th class="text-center">Equipaje</th>
             <th>Fecha</th>
             <th>Precio</th>
-            <th>Estado</th>
-            <th>Descripción</th>
-            <th>Progreso</th>
-            <th>URL</th> <!-- ✅ Nueva columna -->
+            <th style="min-width: 12rem">Estado</th>
+            <th class="text-center">Link</th>
+            <th>Acciones</th>
           </tr>
         </ng-template>
 
         <ng-template #body let-flight>
           <tr>
-            <td>{{ flight.flightNumber }}</td>
-            <td>{{ flight.origin }}</td>
-            <td>{{ flight.destination }}</td>
-            <td>{{ flight.parsedDate || flight.date | date: 'dd/MM/yyyy' }}</td>
-            <td>{{ flight.price | currency: 'USD' }}</td>
             <td>
-              <p-tag
-                [value]="flight.status"
-                [severity]="getSeverity(flight.status)"
-              ></p-tag>
+              <div class="font-bold">{{ flight.flightNumber || 'S/N' }}</div>
+              <div class="text-xs text-secondary">{{ flight.airline }}</div>
             </td>
-            <td>{{ flight.description }}</td>
+            <td>{{ flight.origin }} <i class="pi pi-arrow-right text-xs"></i> {{ flight.destination }}</td>
             <td>
-              <p-progressbar
-                [value]="flight.progress"
-                [showValue]="false"
-                [style]="{ height: '0.5rem' }"
-              ></p-progressbar>
+              <p-tag *ngIf="flight.hasLayovers" [value]="flight.layoverCount + ' Escalas'" severity="warn" />
+              <span *ngIf="!flight.hasLayovers" class="text-xs text-green-500 font-medium">Directo</span>
+            </td>
+            <td class="text-center">
+              <i class="pi" [ngClass]="{'pi-briefcase text-blue-500': flight.includesBaggage, 'pi-times text-400': !flight.includesBaggage}"></i>
+            </td>
+            <td>{{ flight.date | date: 'dd/MM/yyyy' }}</td>
+            <td class="font-semibold text-primary">{{ flight.price | currency: 'USD' }}</td>
+            <td>
+              <p-select 
+                [(ngModel)]="flight.status" 
+                [options]="statuses" 
+                optionLabel="label" 
+                optionValue="label"
+                (onChange)="onStatusChange(flight)"
+                styleClass="w-full border-none shadow-none bg-transparent"
+                appendTo="body">
+                <ng-template #selectedItem let-selectedOption>
+                  <p-tag [value]="selectedOption.label" [severity]="getSeverity(selectedOption.label)" />
+                </ng-template>
+              </p-select>
+            </td>
+            <td class="text-center">
+              <a *ngIf="flight.url" [href]="flight.url" target="_blank" class="text-blue-500">
+                <i class="pi pi-external-link"></i>
+              </a>
             </td>
             <td>
-              <a
-                *ngIf="flight.url"
-                [href]="flight.url"
-                target="_blank"
-                class="text-blue-500 underline"
-                >Ver vuelo</a
-              >
+              <div class="flex gap-2">
+                <p-button icon="pi pi-pencil" [rounded]="true" [outlined]="true" (onClick)="editFlight(flight)" />
+                <p-button icon="pi pi-trash" severity="danger" [rounded]="true" [outlined]="true" (onClick)="deleteFlight(flight)" />
+              </div>
             </td>
           </tr>
         </ng-template>
-
-        <ng-template #emptymessage>
-          <tr><td colspan="9">No se encontraron vuelos.</td></tr>
-        </ng-template>
-
-        <ng-template #loadingbody>
-          <tr><td colspan="9">Cargando datos...</td></tr>
-        </ng-template>
       </p-table>
+
+      <p-dialog header="Vincular a Calculadora" [(visible)]="destinosDialog" [modal]="true" [style]="{width: '350px'}">
+        <div class="flex flex-col gap-4">
+            <p class="text-sm">Has marcado este vuelo como <b>Reservado</b>. ¿A qué destino quieres sumarlo como gasto de <b>Tiquetes</b>?</p>
+            <p-select [options]="listaDestinos" [(ngModel)]="destinoSeleccionado" optionLabel="nombre" placeholder="Selecciona destino" styleClass="w-full" appendTo="body"></p-select>
+            <p-button label="Confirmar Gasto" icon="pi pi-check" (onClick)="confirmarVinculacion()" [disabled]="!destinoSeleccionado"></p-button>
+        </div>
+      </p-dialog>
+
+      <p-dialog [(visible)]="flightDialog" [style]="{ width: '550px' }" header="Detalles del Vuelo" [modal]="true" styleClass="p-fluid">
+        <div class="flex flex-col gap-5 mt-2">
+          <div class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col gap-2">
+              <label class="font-bold text-sm">Aerolínea</label>
+              <input pInputText [(ngModel)]="flight.airline" placeholder="Ej: Avianca" />
+            </div>
+            <div class="flex flex-col gap-2">
+              <label class="font-bold text-sm">Nº de Vuelo</label>
+              <input pInputText [(ngModel)]="flight.flightNumber" placeholder="Ej: AV123" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col gap-2">
+              <label class="font-bold text-sm">Código Reserva</label>
+              <input pInputText [(ngModel)]="flight.bookingCode" placeholder="ABC123" />
+            </div>
+            <div class="flex items-center pt-8">
+              <p-checkbox [(ngModel)]="flight.includesBaggage" [binary]="true" inputId="bagg" />
+              <label for="bagg" class="ml-2 font-bold text-sm">¿Incluye Equipaje?</label>
+            </div>
+          </div>
+
+          <div class="p-4 bg-surface-50 dark:bg-surface-900 rounded-lg">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="flex flex-col gap-2">
+                    <label class="font-bold text-sm">¿Escalas?</label>
+                    <p-toggleswitch [(ngModel)]="flight.hasLayovers" />
+                </div>
+                <div class="flex flex-col gap-2" *ngIf="flight.hasLayovers">
+                    <label class="font-bold text-sm">Nº Escalas</label>
+                    <p-inputnumber [(ngModel)]="flight.layoverCount" [showButtons]="true" [min]="1" />
+                </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col gap-2">
+              <label class="font-bold text-sm">Origen</label>
+              <input pInputText [(ngModel)]="flight.origin" />
+            </div>
+            <div class="flex flex-col gap-2">
+              <label class="font-bold text-sm">Destino</label>
+              <input pInputText [(ngModel)]="flight.destination" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col gap-2">
+              <label class="font-bold text-sm">Fecha</label>
+              <p-datepicker [(ngModel)]="flight.date" dateFormat="dd/mm/yy" [showIcon]="true" appendTo="body" />
+            </div>
+            <div class="flex flex-col gap-2">
+              <label class="font-bold text-sm">Precio (USD)</label>
+              <p-inputnumber [(ngModel)]="flight.price" mode="currency" currency="USD" />
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label class="font-bold text-sm">Link de Reserva</label>
+            <input pInputText [(ngModel)]="flight.url" placeholder="https://..." />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label class="font-bold text-sm">Descripción / Notas</label>
+            <textarea pTextarea [(ngModel)]="flight.description" rows="2"></textarea>
+          </div>
+        </div>
+
+        <ng-template #footer>
+            <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="hideDialog()" />
+            <p-button label="Guardar Vuelo" icon="pi pi-save" severity="success" (onClick)="saveFlight()" />
+        </ng-template>
+      </p-dialog>
     </div>
-  `,
-  styles: [
-    `
-      .p-datatable-frozen-tbody {
-        font-weight: bold;
-      }
-      .p-datatable-scrollable .p-frozen-column {
-        font-weight: bold;
-      }
-    `
-  ],
-  providers: [ConfirmationService, MessageService]
+  `
 })
 export class Empty implements OnInit {
-  flights: FlightWithParsedDate[] = [];
-  loading: boolean = true;
-  @ViewChild('filter') filter!: ElementRef;
+  flights = signal<Flight[]>([]);
+  flight: Flight = {};
+  flightDialog: boolean = false;
+  destinosDialog: boolean = false;
+  listaDestinos: any[] = [];
+  destinoSeleccionado: any = null;
+  vueloPendiente: Flight | null = null;
 
-  ngOnInit() {
-    // ✈️ Datos de ejemplo
-    const flightData: Flight[] = [
-      {
-        id: 1,
-        flightNumber: 'AV123',
-        origin: 'Bogotá',
-        destination: 'Medellín',
-        date: '2025-11-02',
-        price: 180.5,
-        status: 'Reservado',
-        description: 'Vuelo nacional con escala corta.',
-        progress: 100,
-        url: 'https://www.avianca.com/co/es' // ✅ Ejemplo URL
-      },
-      {
-        id: 2,
-        flightNumber: 'LA456',
-        origin: 'Cali',
-        destination: 'Cartagena',
-        date: '2025-11-10',
-        price: 230,
-        status: 'En proceso',
-        description: 'Vuelo programado sujeto a confirmación.',
-        progress: 60,
-        url: 'https://www.latamairlines.com/co/es'
-      },
-      {
-        id: 3,
-        flightNumber: 'IB789',
-        origin: 'Bogotá',
-        destination: 'Madrid',
-        date: '2025-12-05',
-        price: 900,
-        status: 'Descartado',
-        description: 'Vuelo cancelado por mantenimiento.',
-        progress: 0,
-        url: 'https://www.iberia.com/co/'
-      }
-    ];
+  statuses = [{ label: 'Reservado' }, { label: 'En proceso' }, { label: 'Descartado' }, { label: 'Visto' }];
 
-    // ✅ Convertimos fechas sin modificar tipo original
-    this.flights = flightData.map(flight => ({
-      ...flight,
-      parsedDate: new Date(flight.date)
-    }));
+  private readonly LS_CALC = 'mis_destinos_data_v2';
+  private readonly LS_VUE = 'mis_vuelos_data_v1';
 
-    this.loading = false;
-  }
+  private messageService = inject(MessageService);
+  private confirmationService = inject(ConfirmationService);
 
-  onGlobalFilter(table: Table, event: Event) {
-    table.filterGlobal((event.target as HTMLInputElement).value, 'contains');
-  }
+  @HostListener('window:storage')
+  onExternalUpdate() { this.loadFlights(); }
 
-  clear(table: Table) {
-    table.clear();
-    if (this.filter) this.filter.nativeElement.value = '';
-  }
+  ngOnInit() { this.loadFlights(); }
 
-  getSeverity(status: string): 'success' | 'info' | 'warn' | 'danger' | null {
-    switch (status.toLowerCase()) {
-      case 'reservado':
-        return 'success';
-      case 'en proceso':
-        return 'warn';
-      case 'descartado':
-        return 'danger';
-      default:
-        return 'info';
+  loadFlights() {
+    const saved = localStorage.getItem(this.LS_VUE);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      parsed.forEach((f: any) => { if(f.date) f.date = new Date(f.date) });
+      this.flights.set(parsed);
     }
   }
+
+  onStatusChange(flight: Flight) {
+    if (flight.status === 'Reservado') {
+      if (!flight.registradoEnCalculadora) {
+        this.abrirVinculacion(flight);
+      }
+    } else {
+      // Si el estado ya no es Reservado, quitar de la calculadora
+      if (flight.registradoEnCalculadora) {
+        this.eliminarGastoDeCalculadora(flight);
+      }
+    }
+    this.saveToLocal();
+  }
+
+  abrirVinculacion(flight: Flight) {
+    const data = localStorage.getItem(this.LS_CALC);
+    this.listaDestinos = data ? JSON.parse(data) : [];
+    
+    if (this.listaDestinos.length === 0) {
+      this.messageService.add({ severity: 'warn', summary: 'Info', detail: 'Crea un destino en la calculadora primero' });
+      flight.status = 'Visto';
+      return;
+    }
+    this.vueloPendiente = flight;
+    this.destinosDialog = true;
+  }
+
+  confirmarVinculacion() {
+    if (!this.vueloPendiente || !this.destinoSeleccionado) return;
+
+    const dataCalculadora = JSON.parse(localStorage.getItem(this.LS_CALC) || '[]');
+    const index = dataCalculadora.findIndex((d: any) => d.id === this.destinoSeleccionado.id);
+    
+    if (index !== -1) {
+      const gastoId = Date.now();
+      const nuevoGasto = {
+        id: gastoId,
+        refId: this.vueloPendiente.id, // Referencia para borrado
+        categoria: 'Vuelos',
+        descripcion: `Ticket: ${this.vueloPendiente.airline} (${this.vueloPendiente.origin}-${this.vueloPendiente.destination})`,
+        monto: this.vueloPendiente.price || 0
+      };
+
+      if (!dataCalculadora[index].gastos) dataCalculadora[index].gastos = [];
+      dataCalculadora[index].gastos.push(nuevoGasto);
+      
+      localStorage.setItem(this.LS_CALC, JSON.stringify(dataCalculadora));
+      window.dispatchEvent(new Event('storage'));
+
+      this.vueloPendiente.registradoEnCalculadora = true;
+      this.vueloPendiente.refGastoId = gastoId;
+      this.saveToLocal();
+      this.messageService.add({ severity: 'success', summary: 'Sincronizado', detail: 'Sumado a la calculadora' });
+    }
+    this.destinosDialog = false;
+  }
+
+  eliminarGastoDeCalculadora(flight: Flight) {
+    const dataCalculadora = JSON.parse(localStorage.getItem(this.LS_CALC) || '[]');
+    let huboCambio = false;
+
+    dataCalculadora.forEach((destino: any) => {
+      if (destino.gastos) {
+        const originalLen = destino.gastos.length;
+        // Filtramos por refId o por refGastoId para asegurar limpieza
+        destino.gastos = destino.gastos.filter((g: any) => g.refId !== flight.id && g.id !== flight.refGastoId);
+        if (destino.gastos.length !== originalLen) huboCambio = true;
+      }
+    });
+
+    if (huboCambio) {
+      localStorage.setItem(this.LS_CALC, JSON.stringify(dataCalculadora));
+      window.dispatchEvent(new Event('storage'));
+    }
+    flight.registradoEnCalculadora = false;
+    flight.refGastoId = undefined;
+  }
+
+  saveFlight() {
+    let _flights = [...this.flights()];
+    if (this.flight.id) {
+      const idx = _flights.findIndex(f => f.id === this.flight.id);
+      _flights[idx] = this.flight;
+    } else {
+      this.flight.id = Date.now();
+      _flights.push(this.flight);
+    }
+    
+    this.flights.set(_flights);
+    this.saveToLocal();
+    
+    // Procesar estado si se guarda como Reservado
+    if (this.flight.status === 'Reservado') {
+        this.onStatusChange(this.flight);
+    } else if (this.flight.registradoEnCalculadora) {
+        this.eliminarGastoDeCalculadora(this.flight);
+    }
+
+    this.flightDialog = false;
+    this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Vuelo guardado' });
+  }
+
+  deleteFlight(f: Flight) {
+    this.confirmationService.confirm({
+      message: `¿Borrar vuelo ${f.flightNumber}? Se eliminará también de la calculadora si está vinculado.`,
+      header: 'Confirmar eliminación',
+      icon: 'pi pi-exclamation-triangle',
+      accept: () => {
+        this.eliminarGastoDeCalculadora(f);
+        this.flights.set(this.flights().filter(x => x.id !== f.id));
+        this.saveToLocal();
+        this.messageService.add({ severity: 'info', summary: 'Eliminado', detail: 'Vuelo quitado de la lista' });
+      }
+    });
+  }
+
+  saveToLocal() { localStorage.setItem(this.LS_VUE, JSON.stringify(this.flights())); }
+  calcularTotal() { return this.flights().reduce((acc, f) => acc + (f.price || 0), 0); }
+  
+  getSeverity(s: string | undefined) {
+    if (s === 'Reservado') return 'success';
+    if (s === 'En proceso') return 'warn';
+    if (s === 'Descartado') return 'danger';
+    return 'secondary';
+  }
+
+  openNew() { this.flight = { status: 'Visto', date: new Date(), hasLayovers: false }; this.flightDialog = true; }
+  editFlight(f: Flight) { this.flight = { ...f }; this.flightDialog = true; }
+  hideDialog() { this.flightDialog = false; }
 }

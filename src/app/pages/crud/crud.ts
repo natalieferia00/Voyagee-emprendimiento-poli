@@ -1,7 +1,7 @@
 import { Component, OnInit, signal, ViewChild } from '@angular/core';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { Table, TableModule } from 'primeng/table';
-import { CommonModule } from '@angular/common';
+import { CommonModule, CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { RippleModule } from 'primeng/ripple';
@@ -18,380 +18,347 @@ import { TagModule } from 'primeng/tag';
 import { InputIconModule } from 'primeng/inputicon';
 import { IconFieldModule } from 'primeng/iconfield';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { Product, ProductService } from '../service/product.service';
+import { TooltipModule } from 'primeng/tooltip';
 
-interface Column {
-    field: string;
-    header: string;
-    customExportHeader?: string;
-}
-
-interface ExportColumn {
-    title: string;
-    dataKey: string;
+export interface Product {
+    id?: string;
+    name?: string;
+    description?: string;
+    price?: number;
+    inventoryStatus?: string;
+    rating?: number;
+    URL?: string;
+    tipoAlojamiento?: string;
+    registradoEnCalculadora?: boolean;
 }
 
 @Component({
     selector: 'app-crud',
     standalone: true,
     imports: [
-        CommonModule,
-        TableModule,
-        FormsModule,
-        ButtonModule,
-        RippleModule,
-        ToastModule,
-        ToolbarModule,
-        RatingModule,
-        InputTextModule,
-        TextareaModule,
-        SelectModule,
-        RadioButtonModule,
-        InputNumberModule,
-        DialogModule,
-        TagModule,
-        InputIconModule,
-        IconFieldModule,
-        ConfirmDialogModule
+        CommonModule, TableModule, FormsModule, ButtonModule, RippleModule,
+        ToastModule, ToolbarModule, RatingModule, InputTextModule,
+        TextareaModule, SelectModule, RadioButtonModule, InputNumberModule,
+        DialogModule, TagModule, InputIconModule, IconFieldModule, 
+        ConfirmDialogModule, TooltipModule
     ],
+    providers: [MessageService, ConfirmationService, CurrencyPipe],
     template: `
-        <p-toolbar styleClass="mb-6">
-            <ng-template #start>
-                <p-button label="New" icon="pi pi-plus" severity="secondary" class="mr-2" (onClick)="openNew()" />
-                <p-button severity="secondary" label="Delete" icon="pi pi-trash" outlined (onClick)="deleteSelectedProducts()" [disabled]="!selectedProducts || !selectedProducts.length" />
-            </ng-template>
+        <p-toast />
+        <p-confirmdialog />
 
-            <ng-template #end>
-                <p-button label="Export" icon="pi pi-upload" severity="secondary" (onClick)="exportCSV()" />
-            </ng-template>
-        </p-toolbar>
+        <div class="card">
+            <div class="flex justify-between items-center mb-4">
+                <div class="font-semibold text-xl text-800">Gestión de Alojamientos</div>
+                <p-tag severity="contrast" [style]="{'font-size': '1.1rem', 'padding': '8px 15px'}" 
+                       [value]="'Inversión Total: ' + (calcularTotal() | currency:'USD':'symbol':'1.0-2')" />
+            </div>
 
-        <p-table
-            #dt
-            [value]="products()"
-            [rows]="10"
-            [columns]="cols"
-            [paginator]="true"
-            [globalFilterFields]="['name', 'country.name', 'representative.name', 'status']"
-            [tableStyle]="{ 'min-width': '75rem' }"
-            [(selection)]="selectedProducts"
-            [rowHover]="true"
-            dataKey="id"
-            currentPageReportTemplate="Showing {first} to {last} of {totalRecords} products"
-            [showCurrentPageReport]="true"
-            [rowsPerPageOptions]="[10, 20, 30]"
-        >
-            <ng-template #caption>
-                <div class="flex items-center justify-between">
-                    <h5 class="m-0">Alojamientos</h5>
-                    <p-iconfield>
-                        <p-inputicon styleClass="pi pi-search" />
-                        <input pInputText type="text" (input)="onGlobalFilter(dt, $event)" placeholder="Search..." />
-                    </p-iconfield>
+            <p-toolbar styleClass="mb-6">
+                <ng-template #start>
+                    <p-button label="Nuevo Alojamiento" icon="pi pi-plus" severity="success" class="mr-2" (onClick)="openNew()" />
+                    <p-button severity="danger" label="Eliminar Seleccionados" icon="pi pi-trash" outlined (onClick)="deleteSelectedProducts()" [disabled]="!selectedProducts || !selectedProducts.length" />
+                </ng-template>
+
+                <ng-template #end>
+                    <p-button label="Exportar" icon="pi pi-upload" severity="secondary" (onClick)="exportCSV()" />
+                </ng-template>
+            </p-toolbar>
+
+            <p-table #dt [value]="products()" [rows]="10" [paginator]="true" [globalFilterFields]="['name', 'tipoAlojamiento', 'inventoryStatus']"
+                [tableStyle]="{ 'min-width': '75rem' }" [(selection)]="selectedProducts" [rowHover]="true" dataKey="id">
+                
+                <ng-template #caption>
+                    <div class="flex items-center justify-between">
+                        <h5 class="m-0 text-700">Listado de Opciones</h5>
+                        <p-iconfield>
+                            <p-inputicon styleClass="pi pi-search" />
+                            <input pInputText type="text" (input)="onGlobalFilter(dt, $event)" placeholder="Buscar alojamiento..." />
+                        </p-iconfield>
+                    </div>
+                </ng-template>
+
+                <ng-template #header>
+                    <tr>
+                        <th style="width: 3rem"><p-tableHeaderCheckbox /></th>
+                        <th>Nombre / Link</th>
+                        <th class="text-center">Detalles</th> 
+                        <th>Precio</th>
+                        <th>Tipo</th>
+                        <th>Puntuación</th>
+                        <th style="min-width: 14rem">Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </ng-template>
+
+                <ng-template #body let-product>
+                    <tr>
+                        <td><p-tableCheckbox [value]="product" /></td>
+                        <td>
+                            <div class="font-bold text-800">{{ product.name }}</div>
+                            <a *ngIf="product.URL" [href]="product.URL" target="_blank" class="text-xs text-blue-500 hover:underline flex items-center gap-1">
+                                <i class="pi pi-external-link" style="font-size: 0.7rem"></i> Visitar Web
+                            </a>
+                        </td>
+                        <td class="text-center">
+                            <i *ngIf="product.description" class="pi pi-eye text-primary cursor-pointer text-xl" [pTooltip]="product.description" tooltipPosition="top"></i>
+                            <i *ngIf="!product.description" class="pi pi-eye-slash text-300"></i>
+                        </td>
+                        <td class="font-medium text-primary">{{ product.price | currency: 'USD' }}</td>
+                        <td>{{ product.tipoAlojamiento }}</td>
+                        <td><p-rating [ngModel]="product.rating" [readonly]="true" /></td>
+                        <td>
+                            <p-select [(ngModel)]="product.inventoryStatus" [options]="statuses" optionLabel="label" optionValue="label"
+                                (onChange)="onStatusChange(product)" styleClass="w-full border-none shadow-none bg-transparent" appendTo="body">
+                                <ng-template #selectedItem let-selectedOption>
+                                    <p-tag [value]="selectedOption.label.toUpperCase()" [severity]="getSeverity(selectedOption.label)" />
+                                </ng-template>
+                            </p-select>
+                        </td>
+                        <td>
+                            <div class="flex gap-2">
+                                <p-button icon="pi pi-pencil" [rounded]="true" [outlined]="true" (onClick)="editProduct(product)" />
+                                <p-button icon="pi pi-trash" severity="danger" [rounded]="true" [outlined]="true" (onClick)="deleteProduct(product)" />
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+
+            <p-dialog header="Vincular a Calculadora" [(visible)]="destinosDialog" [modal]="true" [style]="{width: '350px'}">
+                <div class="flex flex-col gap-4">
+                    <p class="text-sm">¿A qué destino quieres sumar este alojamiento como gasto de <b>Hospedaje</b>?</p>
+                    <p-select [options]="listaDestinos" [(ngModel)]="destinoSeleccionado" optionLabel="nombre" placeholder="Selecciona destino" styleClass="w-full" appendTo="body"></p-select>
+                    <p-button label="Confirmar Gasto" icon="pi pi-check" (onClick)="confirmarVinculacion()" [disabled]="!destinoSeleccionado"></p-button>
                 </div>
-            </ng-template>
-            <ng-template #header>
-                <tr>
-                    <th style="width: 3rem">
-                        <p-tableHeaderCheckbox />
-                    </th>
-                    <th style="min-width: 16rem">Codigo</th>
-                    <th pSortableColumn="nombre" style="min-width:16rem">
-                        Nombre
-                        <p-sortIcon field="nombre" />
-                    </th>
-                    <th>Imagen</th>
-                    <th pSortableColumn="precio" style="min-width: 8rem">
-                        Precio
-                        <p-sortIcon field="precio" />
-                    </th>
-                    <th pSortableColumn="tipoAlojamiento" style="min-width:10rem">
-                        tipoAlojamiento
-                        <p-sortIcon field="tipoAlojamiento" />
-                    </th>
-                    <th pSortableColumn="Estrellas" style="min-width: 12rem">
-                        Estrellas
-                        <p-sortIcon field="Estrellas" />
-                    </th>
-                    <th pSortableColumn="Estado" style="min-width: 12rem">
-                        Estado
-                        <p-sortIcon field="Estado" />
-                    </th>
-                    <th style="min-width: 12rem"></th>
-                </tr>
-            </ng-template>
-            <ng-template #body let-product>
-                <tr>
-                    <td style="width: 3rem">
-                        <p-tableCheckbox [value]="product" />
-                    </td>
-                    <td style="min-width: 12rem">{{ product.code }}</td>
-                    <td style="min-width: 16rem">{{ product.name }}</td>
-                    <td>
-                        <img [src]="'https://primefaces.org/cdn/primeng/images/demo/product/' + product.image" [alt]="product.name" style="width: 64px" class="rounded" />
-                    </td>
-                    <td>{{ product.price | currency: 'USD' }}</td>
-                    <td>{{ product.category }}</td>
-                    <td>
-                        <p-rating [(ngModel)]="product.rating" [readonly]="true" />
-                    </td>
-                    <td>
-                        <p-tag [value]="product.inventoryStatus" [severity]="getSeverity(product.inventoryStatus)" />
-                    </td>
-                    <td>
-                        <p-button icon="pi pi-pencil" class="mr-2" [rounded]="true" [outlined]="true" (click)="editProduct(product)" />
-                        <p-button icon="pi pi-trash" severity="danger" [rounded]="true" [outlined]="true" (click)="deleteProduct(product)" />
-                    </td>
-                </tr>
-            </ng-template>
-        </p-table>
+            </p-dialog>
 
-        <p-dialog [(visible)]="productDialog" [style]="{ width: '450px' }" header="Detalles del alojamiento" [modal]="true">
-            <ng-template #content>
-                <div class="flex flex-col gap-6">
-                    <img [src]="'https://primefaces.org/cdn/primeng/images/demo/product/' + product.image" [alt]="product.image" class="block m-auto pb-4" *ngIf="product.image" />
-                    <div>
-                        <label for="name" class="block font-bold mb-3"> Nombre</label>
-                        <input type="text" pInputText id="name" [(ngModel)]="product.name" required autofocus fluid />
-                        <small class="text-red-500" *ngIf="submitted && !product.name">El nombre del alojamiento es requerido.</small>
-                    </div>
-                    <div>
-                        <label for="description" class="block font-bold mb-3">Descripción</label>
-                        <textarea id="description" pTextarea [(ngModel)]="product.description" required rows="3" cols="20" fluid></textarea>
-                    </div>
-
-                    <div>
-                        <label for="inventoryStatus" class="block font-bold mb-3">Estado del alojamiento</label>
-                        <p-select [(ngModel)]="product.inventoryStatus" inputId="inventoryStatus" [options]="statuses" optionLabel="label" optionValue="label" placeholder="Select a Status" fluid />
-                    </div>
-
-                    <div>
-                        <span class="block font-bold mb-4">Tipo de alojamiento</span>
-                        <div class="grid grid-cols-12 gap-4">
-                            <div class="flex items-center gap-2 col-span-6">
-                                <p-radiobutton id="category1" name="category" value="Hotel" [(ngModel)]="product.category" />
-                                <label for="category1">Hotel</label>
+            <p-dialog [(visible)]="productDialog" [style]="{ width: '550px' }" header="Detalles del Alojamiento" [modal]="true" styleClass="p-fluid">
+                <ng-template #content>
+                    <div class="flex flex-col gap-5 pt-2">
+                        <div class="flex flex-col gap-2">
+                            <label class="font-bold text-800">Nombre del Alojamiento</label>
+                            <input type="text" pInputText [(ngModel)]="product.name" required autofocus placeholder="Ej: Hotel Hilton" />
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="flex flex-col gap-2">
+                                <label class="font-bold text-800">Tipo de Alojamiento</label>
+                                <p-select [(ngModel)]="product.tipoAlojamiento" [options]="tipos" placeholder="Seleccionar tipo" />
                             </div>
-                            <div class="flex items-center gap-2 col-span-6">
-                                <p-radiobutton id="category2" name="category" value="resort" [(ngModel)]="product.category" />
-                                <label for="category2">Resort</label>
-                            </div>
-                            <div class="flex items-center gap-2 col-span-6">
-                                <p-radiobutton id="category3" name="category" value="Motel" [(ngModel)]="product.category" />
-                                <label for="category3">Motel</label>
-                            </div>
-                            <div class="flex items-center gap-2 col-span-6">
-                                <p-radiobutton id="category4" name="category" value="Villa" [(ngModel)]="product.category" />
-                                <label for="category4">Villa</label>
-                            </div>
-                             <div class="flex items-center gap-2 col-span-6">
-                                <p-radiobutton id="category4" name="category" value="Casa" [(ngModel)]="product.category" />
-                                <label for="category4">Casa</label>
-                                 <div class="flex items-center gap-2 col-span-6">
-                                <p-radiobutton id="category4" name="category" value="Otro" [(ngModel)]="product.category" />
-                                <label for="category4">Otro</label>
-                                
-                            </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="font-bold text-800">Estado de Gestión</label>
+                                <p-select [(ngModel)]="product.inventoryStatus" [options]="statuses" optionLabel="label" optionValue="label" />
                             </div>
                         </div>
-                    </div>
-
-                    <div class="grid grid-cols-12 gap-4">
-                        <div class="col-span-6">
-                            <label for="price" class="block font-bold mb-3">Precio</label>
-                            <p-inputnumber id="price" [(ngModel)]="product.price" mode="currency" currency="USD" locale="en-US" fluid />
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="flex flex-col gap-2">
+                                <label class="font-bold text-800">Precio Sugerido (USD)</label>
+                                <p-inputnumber [(ngModel)]="product.price" mode="currency" currency="USD" locale="en-US" />
+                            </div>
+                            <div class="flex flex-col gap-2">
+                                <label class="font-bold text-800">Puntuación Personal</label>
+                                <div class="pt-2"><p-rating [(ngModel)]="product.rating" /></div>
+                            </div>
                         </div>
-                        <div class="col-span-6">
-                            <label for="quantity" class="block font-bold mb-3">Estrellas</label>
-                            <p-inputnumber id="quantity" [(ngModel)]="product.quantity" fluid />
+                        <div class="flex flex-col gap-2">
+                            <label class="font-bold text-800">Enlace Web</label>
+                            <div class="p-inputgroup">
+                                <span class="p-inputgroup-addon"><i class="pi pi-link"></i></span>
+                                <input type="text" pInputText [(ngModel)]="product.URL" placeholder="https://..." />
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <label class="font-bold text-800">Descripción y Notas</label>
+                            <textarea pTextarea [(ngModel)]="product.description" rows="5" style="resize: none"></textarea>
                         </div>
                     </div>
-                </div>
-            </ng-template>
-
-            <ng-template #footer>
-                <p-button label="Cancel" icon="pi pi-times" text (click)="hideDialog()" />
-                <p-button label="Save" icon="pi pi-check" (click)="saveProduct()" />
-            </ng-template>
-        </p-dialog>
-
-        <p-confirmdialog [style]="{ width: '450px' }" />
-    `,
-    providers: [MessageService, ProductService, ConfirmationService]
+                </ng-template>
+                <ng-template #footer>
+                    <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="hideDialog()" />
+                    <p-button label="Guardar Alojamiento" icon="pi pi-save" severity="success" (onClick)="saveProduct()" />
+                </ng-template>
+            </p-dialog>
+        </div>
+    `
 })
 export class Crud implements OnInit {
+    products = signal<Product[]>([]);
+    product: Product = {};
+    selectedProducts!: Product[] | null;
+    submitted: boolean = false;
     productDialog: boolean = false;
 
-    products = signal<Product[]>([]);
+    destinosDialog: boolean = false;
+    listaDestinos: any[] = [];
+    destinoSeleccionado: any = null;
+    alojamientoPendiente: Product | null = null;
 
-    product!: Product;
+    statuses = [{ label: 'Visto' }, { label: 'Reservado' }, { label: 'Descartado' }, { label: 'En proceso' }];
+    tipos = ['Hotel', 'Casa', 'Apartamento', 'Hostal', 'Otro'];
 
-    selectedProducts!: Product[] | null;
-
-    submitted: boolean = false;
-
-    statuses!: any[];
+    private readonly LS_CALC = 'mis_destinos_data_v2';
+    private readonly LS_ALOJ = 'mis_alojamientos_data_v1';
 
     @ViewChild('dt') dt!: Table;
 
-    exportColumns!: ExportColumn[];
+    constructor(private messageService: MessageService, private confirmationService: ConfirmationService) {}
 
-    cols!: Column[];
+    ngOnInit() { this.loadData(); }
 
-    constructor(
-        private productService: ProductService,
-        private messageService: MessageService,
-        private confirmationService: ConfirmationService
-    ) {}
-
-    exportCSV() {
-        this.dt.exportCSV();
+    loadData() {
+        const saved = localStorage.getItem(this.LS_ALOJ);
+        if (saved) this.products.set(JSON.parse(saved));
     }
 
-    ngOnInit() {
-        this.loadDemoData();
+    saveToLocal() {
+        localStorage.setItem(this.LS_ALOJ, JSON.stringify(this.products()));
     }
 
-    loadDemoData() {
-        this.productService.getProducts().then((data) => {
-            this.products.set(data);
+    onStatusChange(product: Product) {
+        if (product.inventoryStatus === 'Reservado') {
+            if (!product.registradoEnCalculadora) {
+                this.abrirVinculacion(product);
+            }
+        } else {
+            // Si cambia de Reservado a cualquier otro estado, eliminamos el gasto de la calculadora
+            if (product.registradoEnCalculadora) {
+                this.syncDeleteWithCalculadora([product.id]);
+                product.registradoEnCalculadora = false;
+            }
+        }
+        this.saveToLocal();
+    }
+
+    abrirVinculacion(product: Product) {
+        const data = localStorage.getItem(this.LS_CALC);
+        this.listaDestinos = data ? JSON.parse(data) : [];
+
+        if (this.listaDestinos.length === 0) {
+            this.messageService.add({ severity: 'warn', summary: 'Info', detail: 'Crea un destino en la calculadora primero' });
+            product.inventoryStatus = 'Visto'; // Revertir si no hay destinos
+            return;
+        }
+        this.alojamientoPendiente = product;
+        this.destinosDialog = true;
+    }
+
+    confirmarVinculacion() {
+        if (!this.alojamientoPendiente || !this.destinoSeleccionado) return;
+
+        const dataCalculadora = JSON.parse(localStorage.getItem(this.LS_CALC) || '[]');
+        const index = dataCalculadora.findIndex((d: any) => d.id === this.destinoSeleccionado.id);
+        
+        if (index !== -1) {
+            const nuevoGasto = {
+                id: Date.now(),
+                refId: this.alojamientoPendiente.id, 
+                categoria: 'Hospedaje',
+                descripcion: `Reserva: ${this.alojamientoPendiente.name}`,
+                monto: this.alojamientoPendiente.price || 0
+            };
+
+            if (!dataCalculadora[index].gastos) dataCalculadora[index].gastos = [];
+            dataCalculadora[index].gastos.push(nuevoGasto);
+            
+            localStorage.setItem(this.LS_CALC, JSON.stringify(dataCalculadora));
+            window.dispatchEvent(new Event('storage'));
+
+            this.alojamientoPendiente.registradoEnCalculadora = true;
+            this.saveToLocal();
+            this.messageService.add({ severity: 'success', summary: 'Sincronizado', detail: 'Gasto enviado a la calculadora' });
+        }
+        this.destinosDialog = false;
+    }
+
+    // --- LÓGICA DE BORRADO EN CADENA ---
+    private syncDeleteWithCalculadora(idsParaBorrar: (string | undefined)[]) {
+        const dataCalc = JSON.parse(localStorage.getItem(this.LS_CALC) || '[]');
+        
+        const dataActualizada = dataCalc.map((destino: any) => {
+            if (destino.gastos) {
+                // Filtramos: Quitamos los gastos cuyo refId coincida con los productos eliminados
+                destino.gastos = destino.gastos.filter((gasto: any) => !idsParaBorrar.includes(gasto.refId));
+            }
+            return destino;
         });
 
-        this.statuses = [
-            { label: 'Visto', value: 'Visto' },
-            { label: 'Reservado', value: 'Reservado' },
-            { label: 'Descartado', value: 'Descartado' },
-            { label: 'En proceso', value: 'En proceso' }
-        ];
-
-        this.cols = [
-            { field: 'codigo', header: 'Codigo', customExportHeader: 'Codigo del alojamiento' },
-            { field: 'nombre', header: 'nombre' },
-            { field: 'imagen', header: 'Imagen' },
-            { field: 'precio', header: 'Precio' },
-            { field: 'tipoAlojamiento', header: 'tipoAlojamiento' }
-        ];
-
-        this.exportColumns = this.cols.map((col) => ({ title: col.header, dataKey: col.field }));
+        localStorage.setItem(this.LS_CALC, JSON.stringify(dataActualizada));
+        window.dispatchEvent(new Event('storage'));
     }
 
-    onGlobalFilter(table: Table, event: Event) {
-        table.filterGlobal((event.target as HTMLInputElement).value, 'contains');
-    }
-
-    openNew() {
-        this.product = {};
-        this.submitted = false;
-        this.productDialog = true;
-    }
-
-    editProduct(product: Product) {
-        this.product = { ...product };
-        this.productDialog = true;
+    deleteProduct(p: Product) {
+        this.confirmationService.confirm({
+            message: `¿Eliminar ${p.name}? También se borrará de la calculadora si estaba vinculado.`,
+            header: 'Confirmar Eliminación',
+            icon: 'pi pi-exclamation-triangle',
+            accept: () => {
+                this.products.set(this.products().filter((x) => x.id !== p.id));
+                this.saveToLocal();
+                this.syncDeleteWithCalculadora([p.id]);
+                this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Alojamiento y gastos eliminados' });
+            }
+        });
     }
 
     deleteSelectedProducts() {
         this.confirmationService.confirm({
-            message: 'Estas seguro que quieres eliminar este alojamiento?',
-            header: 'Confirmar',
-            icon: 'pi pi-exclamation-triangle',
+            message: '¿Eliminar los alojamientos seleccionados? Se borrarán sus gastos vinculados en la calculadora.',
+            header: 'Confirmar Masivo',
+            icon: 'pi pi-trash',
             accept: () => {
-                this.products.set(this.products().filter((val) => !this.selectedProducts?.includes(val)));
+                const idsParaBorrar = this.selectedProducts?.map(p => p.id) || [];
+                this.products.set(this.products().filter((p) => !this.selectedProducts?.includes(p)));
                 this.selectedProducts = null;
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Successful',
-                    detail: 'Alojamiento Eliminado',
-                    life: 3000
-                });
+                this.saveToLocal();
+                this.syncDeleteWithCalculadora(idsParaBorrar);
+                this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Seleccionados eliminados con éxito' });
             }
         });
-    }
-
-    hideDialog() {
-        this.productDialog = false;
-        this.submitted = false;
-    }
-
-    deleteProduct(product: Product) {
-        this.confirmationService.confirm({
-            message: 'Are you sure you want to delete ' + product.name + '?',
-            header: 'Confirm',
-            icon: 'pi pi-exclamation-triangle',
-            accept: () => {
-                this.products.set(this.products().filter((val) => val.id !== product.id));
-                this.product = {};
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Successful',
-                    detail: 'Product Deleted',
-                    life: 3000
-                });
-            }
-        });
-    }
-
-    findIndexById(id: string): number {
-        let index = -1;
-        for (let i = 0; i < this.products().length; i++) {
-            if (this.products()[i].id === id) {
-                index = i;
-                break;
-            }
-        }
-
-        return index;
-    }
-
-    createId(): string {
-        let id = '';
-        var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        for (var i = 0; i < 5; i++) {
-            id += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return id;
-    }
-
-    getSeverity(status: string) {
-        switch (status) {
-            case 'Reservado':
-                return 'success';
-            case 'En proceso':
-                return 'warn';
-            case 'Descartado':
-                return 'danger';
-            default:
-                return 'info';
-        }
     }
 
     saveProduct() {
         this.submitted = true;
-        let _products = this.products();
         if (this.product.name?.trim()) {
+            let _products = [...this.products()];
             if (this.product.id) {
-                _products[this.findIndexById(this.product.id)] = this.product;
-                this.products.set([..._products]);
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Successful',
-                    detail: 'Product Updated',
-                    life: 3000
-                });
+                const index = _products.findIndex((p) => p.id === this.product.id);
+                _products[index] = this.product;
             } else {
-                this.product.id = this.createId();
-                this.product.image = 'product-placeholder.svg';
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Successful',
-                    detail: 'Product Created',
-                    life: 3000
-                });
-                this.products.set([..._products, this.product]);
+                this.product.id = Math.random().toString(36).substring(2, 9);
+                _products.push(this.product);
             }
-
+            
+            this.products.set(_products);
+            this.saveToLocal();
+            
+            // Si el estado es Reservado al guardar, procesar vinculación
+            if (this.product.inventoryStatus === 'Reservado') {
+                this.onStatusChange(this.product);
+            }
+            
             this.productDialog = false;
             this.product = {};
+            this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Alojamiento guardado' });
         }
+    }
+
+    calcularTotal() { return this.products().reduce((acc, p) => acc + (p.price || 0), 0); }
+    
+    getSeverity(status: string) {
+        switch (status) {
+            case 'Reservado': return 'success';
+            case 'En proceso': return 'warn';
+            case 'Descartado': return 'danger';
+            case 'Visto': return 'info';
+            default: return 'secondary';
+        }
+    }
+    
+    openNew() { this.product = { inventoryStatus: 'Visto', rating: 0 }; this.submitted = false; this.productDialog = true; }
+    editProduct(p: Product) { this.product = { ...p }; this.productDialog = true; }
+    hideDialog() { this.productDialog = false; this.submitted = false; }
+    exportCSV() { this.dt.exportCSV(); }
+    onGlobalFilter(table: Table, event: Event) {
+        table.filterGlobal((event.target as HTMLInputElement).value, 'contains');
     }
 }
