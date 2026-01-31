@@ -1,1 +1,77 @@
-<p>presupuesto works!</p>
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<div class="p-6 max-w-5xl mx-auto">
+    <div class="mb-6">
+        <h1 class="text-4xl font-extrabold text-slate-800 m-0">Configuración</h1>
+        <p class="text-slate-500 mt-2">Gestiona tu perfil, preferencias de viaje y seguridad.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <div class="lg:col-span-2 flex flex-col gap-6">
+            
+            <p-card header="Información del Perfil" styleClass="shadow-sm border-round-xl">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3">
+                    <div class="flex flex-col gap-2">
+                        <label for="nombre" class="font-semibold text-slate-700">Nombre Completo</label>
+                        <input pInputText id="nombre" [(ngModel)]="usuario.nombre" placeholder="Ej. Juan Pérez" class="w-full" />
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <label for="email" class="font-semibold text-slate-700">Correo Electrónico</label>
+                        <input pInputText id="email" [(ngModel)]="usuario.email" placeholder="correo@ejemplo.com" class="w-full" />
+                    </div>
+                </div>
+                <div class="mt-4 flex justify-end">
+                    <p-button label="Guardar Perfil" icon="pi pi-user-edit" (onClick)="guardarPerfil()" [outlined]="true"></p-button>
+                </div>
+            </p-card>
+
+            <p-card header="Preferencias de Viaje" styleClass="shadow-sm border-round-xl">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3">
+                    <div class="flex flex-col gap-2">
+                        <label class="font-semibold text-slate-700">Moneda Principal</label>
+                        <p-select [options]="monedas" [(ngModel)]="usuario.moneda" optionLabel="label" optionValue="value" class="w-full"></p-select>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <label class="font-semibold text-slate-700">Presupuesto Global (Meta)</label>
+                        <div class="p-inputgroup">
+                            <span class="p-inputgroup-addon">$</span>
+                            <input pInputText type="number" [(ngModel)]="usuario.presupuestoTotal" placeholder="0.00" />
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-2 md:col-span-2">
+                        <label class="font-semibold text-slate-700">Fecha de tu próximo viaje</label>
+                        <p-datepicker [(ngModel)]="usuario.fechaViaje" [showIcon]="true" placeholder="Selecciona una fecha" class="w-full"></p-datepicker>
+                    </div>
+                </div>
+                <div class="mt-4 flex justify-end">
+                    <p-button label="Actualizar Preferencias" icon="pi pi-sync" (onClick)="guardarPerfil()" severity="success"></p-button>
+                </div>
+            </p-card>
+        </div>
+
+        <div class="flex flex-col gap-6">
+            
+            <p-card header="Seguridad" styleClass="shadow-sm border-round-xl">
+                <div class="flex flex-col gap-4">
+                    <div class="flex flex-col gap-2">
+                        <label class="font-semibold text-slate-700">Nueva Contraseña</label>
+                        <p-password [(ngModel)]="passwords.new" [toggleMask]="true" [feedback]="true" placeholder="Nueva clave" styleClass="w-full" inputStyleClass="w-full"></p-password>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <label class="font-semibold text-slate-700">Confirmar Contraseña</label>
+                        <p-password [(ngModel)]="passwords.confirm" [toggleMask]="true" [feedback]="false" placeholder="Repite clave" styleClass="w-full" inputStyleClass="w-full"></p-password>
+                    </div>
+                    <p-button label="Cambiar Password" icon="pi pi-lock" (onClick)="cambiarPassword()" severity="warn" styleClass="w-full"></p-button>
+                </div>
+            </p-card>
+
+            <p-card header="Zona de Peligro" styleClass="shadow-sm border-round-xl border-red-100 bg-red-50">
+                <p class="text-sm text-red-600 mb-4">Esta acción borrará permanentemente todos tus datos y presupuestos.</p>
+                <p-button label="Eliminar Cuenta" icon="pi pi-trash" (onClick)="confirmarEliminacion()" severity="danger" styleClass="w-full" [outlined]="true"></p-button>
+            </p-card>
+            
+        </div>
+    </div>
+</div>
