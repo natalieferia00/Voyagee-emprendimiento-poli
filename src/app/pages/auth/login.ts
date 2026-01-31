@@ -9,7 +9,9 @@ import { RippleModule } from 'primeng/ripple';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { CommonModule } from '@angular/common';
+import { HttpClientModule } from '@angular/common/http';
 import { AppFloatingConfigurator } from '../../layout/component/app.floatingconfigurator';
+import { AuthService } from '../service/auth.service'; 
 
 @Component({
     selector: 'app-login',
@@ -17,7 +19,7 @@ import { AppFloatingConfigurator } from '../../layout/component/app.floatingconf
     imports: [
         CommonModule, ButtonModule, CheckboxModule, InputTextModule, 
         PasswordModule, FormsModule, RouterModule, RippleModule, 
-        AppFloatingConfigurator, ToastModule
+        AppFloatingConfigurator, ToastModule, HttpClientModule
     ],
     providers: [MessageService],
     template: `
@@ -28,10 +30,6 @@ import { AppFloatingConfigurator } from '../../layout/component/app.floatingconf
                 <div style="border-radius: 56px; padding: 0.3rem; background: linear-gradient(180deg, var(--primary-color) 10%, rgba(33, 150, 243, 0) 30%)">
                     <div class="w-full bg-surface-0 dark:bg-surface-900 py-20 px-8 sm:px-20" style="border-radius: 53px">
                         <div class="text-center mb-8">
-                            <svg viewBox="0 0 54 40" fill="none" xmlns="http://www.w3.org/2000/svg" class="mb-8 w-16 shrink-0 mx-auto">
-                                <path fill-rule="evenodd" clip-rule="evenodd" d="M17.1637 19.2467C17.1566 19.4033 17.1529 19.561 17.1529 19.7194..." fill="var(--primary-color)"/>
-                            </svg>
-                            
                             <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">
                                 {{ isRegisterMode ? 'Crea tu cuenta' : '¡Bienvenido a Voyagee!' }}
                             </div>
@@ -50,7 +48,7 @@ import { AppFloatingConfigurator } from '../../layout/component/app.floatingconf
                             <div class="flex items-center justify-between mt-2 mb-8 gap-8">
                                 <div class="flex items-center">
                                     <p-checkbox [(ngModel)]="checked" id="rememberme1" binary class="mr-2"></p-checkbox>
-                                    <label for="rememberme1">Remember me</label>
+                                    <label for="rememberme1">Recordarme</label>
                                 </div>
                                 <span (click)="toggleMode()" class="font-medium no-underline ml-2 text-right cursor-pointer text-primary">
                                     {{ isRegisterMode ? '¿Ya tienes cuenta? Login' : '¿No tienes cuenta? Regístrate' }}
@@ -58,7 +56,7 @@ import { AppFloatingConfigurator } from '../../layout/component/app.floatingconf
                             </div>
                             
                             <p-button 
-                                [label]="isRegisterMode ? 'Registrarse' : 'Sign In'" 
+                                [label]="isRegisterMode ? 'Registrarse' : 'Entrar'" 
                                 styleClass="w-full" 
                                 (onClick)="handleAuth()">
                             </p-button>
@@ -77,9 +75,7 @@ export class Login {
 
     private router = inject(Router);
     private messageService = inject(MessageService);
-
-    // Clave para guardar los usuarios en LocalStorage
-    private readonly USERS_KEY = 'voyagee_users';
+    private authService = inject(AuthService);
 
     toggleMode() {
         this.isRegisterMode = !this.isRegisterMode;
@@ -101,42 +97,42 @@ export class Login {
     }
 
     private register() {
-        const users = this.getUsers();
+        const userData = { email: this.email, password: this.password };
         
-        // Verificar si el usuario ya existe
-        if (users.find(u => u.email === this.email)) {
-            this.showError('El correo ya está registrado');
-            return;
-        }
-
-        // Guardar nuevo usuario
-        users.push({ email: this.email, password: this.password });
-        localStorage.setItem(this.USERS_KEY, JSON.stringify(users));
-        
-        this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Cuenta creada correctamente' });
-        this.isRegisterMode = false; // Cambiar a login automáticamente
+        this.authService.register(userData).subscribe({
+            next: (res: any) => {
+                this.messageService.add({ 
+                    severity: 'success', 
+                    summary: 'Éxito', 
+                    detail: 'Cuenta creada correctamente. Ahora puedes iniciar sesión.' 
+                });
+                this.isRegisterMode = false;
+            },
+            error: (err: any) => {
+                const msg = err?.error?.msg || 'Error al conectar con el servidor';
+                this.showError(msg);
+            }
+        });
     }
 
     private login() {
-        const users = this.getUsers();
-        const user = users.find(u => u.email === this.email && u.password === this.password);
+        const userData = { email: this.email, password: this.password };
 
-        if (user) {
-            // Guardar sesión activa (opcional)
-            localStorage.setItem('currentUser', JSON.stringify({ email: user.email }));
-            
-            this.messageService.add({ severity: 'success', summary: 'Bienvenido', detail: 'Accediendo...' });
-            
-            // Redirigir al home tras un pequeño delay para que se vea el toast
-           setTimeout(() => this.router.navigate(['/dashboard']), 1000);
-        } else {
-            this.showError('Credenciales incorrectas');
-        }
-    }
-
-    private getUsers(): any[] {
-        const data = localStorage.getItem(this.USERS_KEY);
-        return data ? JSON.parse(data) : [];
+        this.authService.login(userData).subscribe({
+            next: (res: any) => {
+                this.authService.saveToken(res.token);
+                this.messageService.add({ 
+                    severity: 'success', 
+                    summary: 'Bienvenido', 
+                    detail: 'Accediendo a Voyagee...' 
+                });
+                setTimeout(() => this.router.navigate(['/dashboard']), 1000);
+            },
+            error: (err: any) => {
+                const msg = err?.error?.msg || 'Credenciales incorrectas';
+                this.showError(msg);
+            }
+        });
     }
 
     private showError(msg: string) {

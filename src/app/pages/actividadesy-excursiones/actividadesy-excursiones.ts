@@ -19,8 +19,12 @@ import { ToastModule } from 'primeng/toast';
 import { DatePickerModule } from 'primeng/datepicker';
 import { TooltipModule } from 'primeng/tooltip';
 
+// Servicios (Asegúrate de tener este servicio creado para MongoDB)
+import { ActivityService } from '../service/activity.service';
+
 interface Tour {
-    id?: number;
+    id?: string | number;
+    _id?: string; // Para compatibilidad con MongoDB
     nombre?: string;
     destino?: string;
     duracion?: string;
@@ -49,7 +53,7 @@ interface Tour {
 
     <div class="card">
         <div class="flex justify-between items-center mb-4">
-            <div class="font-semibold text-xl">Gestión de Actividades y Excursiones</div>
+            <div class="font-semibold text-xl text-800">Gestión de Actividades y Excursiones</div>
             <p-tag severity="contrast" [style]="{'font-size': '1.1rem', 'padding': '8px 15px'}" 
                    [value]="'Presupuesto Actividades: ' + (calcularTotal() | currency:'COP':'symbol':'1.0-0')" />
         </div>
@@ -76,7 +80,9 @@ interface Tour {
                 <tr>
                     <td>
                         <div class="font-bold text-800">{{ tour.nombre }}</div>
-                        <div class="text-xs text-slate-500 italic"><i class="pi pi-map-marker text-[10px]"></i> {{ tour.destino }}</div>
+                        <div class="text-xs text-slate-500 italic">
+                            <i class="pi pi-map-marker text-[10px]"></i> {{ tour.destino }}
+                        </div>
                     </td>
                     <td>{{ tour.fecha | date: 'dd/MM/yyyy' }}</td>
                     <td class="font-semibold text-primary">
@@ -138,7 +144,7 @@ interface Tour {
 
                 <div class="flex flex-col gap-2">
                     <label class="font-bold">Notas o Requerimientos</label>
-                    <textarea pTextarea [(ngModel)]="tour.descripcion" rows="3" placeholder="Llevar protector solar, punto de encuentro..."></textarea>
+                    <textarea pTextarea [(ngModel)]="tour.descripcion" rows="3" placeholder="Llevar protector solar..."></textarea>
                 </div>
             </div>
 
@@ -150,7 +156,7 @@ interface Tour {
 
         <p-dialog header="Asignar a Presupuesto" [(visible)]="destinosDialog" [modal]="true" [style]="{width: '400px'}">
             <div class="p-2">
-                <p class="mb-4 text-sm">Esta actividad se encuentra <b>Reservada</b>. ¿A qué destino pertenece este gasto?</p>
+                <p class="mb-4 text-sm">Esta actividad está <b>Reservada</b>. ¿A qué destino pertenece este gasto?</p>
                 <p-select [options]="listaDestinos" [(ngModel)]="destinoSeleccionado" optionLabel="nombre" placeholder="Elegir Destino" styleClass="w-full" appendTo="body" />
                 <div class="flex justify-end mt-4">
                     <p-button label="Sincronizar" icon="pi pi-sync" (onClick)="confirmarVinculacion()" [disabled]="!destinoSeleccionado" />
@@ -161,6 +167,10 @@ interface Tour {
     `
 })
 export class ActividadesyExcursionesComponent implements OnInit {
+    private activityService = inject(ActivityService);
+    private messageService = inject(MessageService);
+    private confirmationService = inject(ConfirmationService);
+
     tours = signal<Tour[]>([]);
     tour: Tour = {};
     tourDialog: boolean = false;
@@ -169,11 +179,7 @@ export class ActividadesyExcursionesComponent implements OnInit {
     destinoSeleccionado: any = null;
     tourPendiente: Tour | null = null;
 
-    private readonly LS_KEY = 'mis_tours_data_v1';
     private readonly LS_CALC_KEY = 'mis_destinos_data_v2';
-
-    private messageService = inject(MessageService);
-    private confirmationService = inject(ConfirmationService);
 
     estados = [
         { label: 'Visto', value: 'Visto' },
@@ -182,20 +188,43 @@ export class ActividadesyExcursionesComponent implements OnInit {
         { label: 'Descartado', value: 'Descartado' }
     ];
 
-    @HostListener('window:storage')
-    onExternalUpdate() { this.loadFromLocal(); }
+    ngOnInit() { this.loadData(); }
 
-    ngOnInit() { this.loadFromLocal(); }
-
-    loadFromLocal() {
-        const saved = localStorage.getItem(this.LS_KEY);
-        if (saved) {
-            const data = JSON.parse(saved);
-            this.tours.set(data.map((t: any) => ({ ...t, fecha: t.fecha ? new Date(t.fecha) : null })));
-        }
+    loadData() {
+        this.activityService.getActivities().subscribe({
+            next: (data) => {
+                this.tours.set(data.map(t => ({ 
+                    ...t, 
+                    id: t._id, 
+                    fecha: t.fecha ? new Date(t.fecha) : null 
+                })));
+            },
+            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo conectar con el servidor' })
+        });
     }
 
-    saveToLocal() { localStorage.setItem(this.LS_KEY, JSON.stringify(this.tours())); }
+    saveTour() {
+        if (!this.tour.nombre?.trim()) return;
+
+        const body = { ...this.tour, _id: this.tour.id };
+
+        this.activityService.saveActivity(body).subscribe({
+            next: (res) => {
+                const tourGuardado = { ...this.tour, id: res._id };
+                
+                // Lógica de sincronización
+                if (this.tour.estado === 'Reservado' && !this.tour.registradoEnCalculadora) {
+                    this.abrirVinculacion(tourGuardado);
+                } else if (this.tour.estado !== 'Reservado' && this.tour.registradoEnCalculadora) {
+                    this.eliminarDeCalculadora(this.tour);
+                }
+
+                this.loadData();
+                this.tourDialog = false;
+                this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Actividad actualizada' });
+            }
+        });
+    }
 
     onStatusChange(t: Tour) {
         if (t.estado === 'Reservado' && !t.registradoEnCalculadora) {
@@ -203,12 +232,14 @@ export class ActividadesyExcursionesComponent implements OnInit {
         } else if (t.estado !== 'Reservado' && t.registradoEnCalculadora) {
             this.eliminarDeCalculadora(t);
         }
-        this.saveToLocal();
+        // Actualizar en BD el cambio de estado
+        this.activityService.saveActivity({ ...t, _id: t.id }).subscribe();
     }
 
     abrirVinculacion(t: Tour) {
         const data = localStorage.getItem(this.LS_CALC_KEY);
         this.listaDestinos = data ? JSON.parse(data) : [];
+        
         if (this.listaDestinos.length === 0) {
             this.messageService.add({ severity: 'warn', summary: 'Calculadora Vacía', detail: 'Crea un destino primero' });
             t.estado = 'Visto';
@@ -220,26 +251,31 @@ export class ActividadesyExcursionesComponent implements OnInit {
 
     confirmarVinculacion() {
         if (!this.tourPendiente || !this.destinoSeleccionado) return;
+        
         const dataCalc = JSON.parse(localStorage.getItem(this.LS_CALC_KEY) || '[]');
         const idx = dataCalc.findIndex((d: any) => d.id === this.destinoSeleccionado.id);
         
         if (idx !== -1) {
             const gastoId = Date.now();
             if (!dataCalc[idx].gastos) dataCalc[idx].gastos = [];
+            
             dataCalc[idx].gastos.push({
                 id: gastoId,
-                refId: this.tourPendiente.id, // Para vinculación cruzada
+                refId: this.tourPendiente.id,
                 categoria: 'Otros',
                 descripcion: `Tour: ${this.tourPendiente.nombre}`,
                 monto: this.tourPendiente.precio || 0
             });
+            
             localStorage.setItem(this.LS_CALC_KEY, JSON.stringify(dataCalc));
-            window.dispatchEvent(new Event('storage'));
+            window.dispatchEvent(new Event('storage')); // Sincroniza widgets
             
             this.tourPendiente.registradoEnCalculadora = true;
             this.tourPendiente.refGastoId = gastoId;
-            this.saveToLocal();
-            this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Sumado al presupuesto global' });
+            
+            // Persistir bandera en BD
+            this.activityService.saveActivity({ ...this.tourPendiente, _id: this.tourPendiente.id }).subscribe();
+            this.messageService.add({ severity: 'success', summary: 'Sincronizado', detail: 'Añadido al presupuesto global' });
         }
         this.destinosDialog = false;
     }
@@ -247,6 +283,7 @@ export class ActividadesyExcursionesComponent implements OnInit {
     eliminarDeCalculadora(t: Tour) {
         const dataCalc = JSON.parse(localStorage.getItem(this.LS_CALC_KEY) || '[]');
         let cambio = false;
+
         dataCalc.forEach((dest: any) => {
             if (dest.gastos) {
                 const count = dest.gastos.length;
@@ -254,6 +291,7 @@ export class ActividadesyExcursionesComponent implements OnInit {
                 if (dest.gastos.length !== count) cambio = true;
             }
         });
+
         if (cambio) {
             localStorage.setItem(this.LS_CALC_KEY, JSON.stringify(dataCalc));
             window.dispatchEvent(new Event('storage'));
@@ -262,45 +300,37 @@ export class ActividadesyExcursionesComponent implements OnInit {
         t.refGastoId = undefined;
     }
 
-    saveTour() {
-        if (!this.tour.nombre?.trim()) return;
-        let _tours = [...this.tours()];
-        if (this.tour.id) {
-            const index = _tours.findIndex(r => r.id === this.tour.id);
-            _tours[index] = this.tour;
-        } else {
-            this.tour.id = Date.now();
-            _tours.push(this.tour);
-        }
-        this.tours.set(_tours);
-        this.saveToLocal();
-
-        if (this.tour.estado === 'Reservado') {
-            this.onStatusChange(this.tour);
-        } else if (this.tour.registradoEnCalculadora) {
-            this.eliminarDeCalculadora(this.tour);
-        }
-
-        this.tourDialog = false;
-        this.messageService.add({ severity: 'success', summary: 'Guardado', detail: 'Actividad actualizada' });
-    }
-
     deleteTour(t: Tour) {
         this.confirmationService.confirm({
-            message: `¿Eliminar ${t.nombre}? También se quitará del presupuesto.`,
+            message: `¿Eliminar "${t.nombre}"? También se quitará del presupuesto.`,
+            header: 'Confirmar eliminación',
+            icon: 'pi pi-trash',
             accept: () => {
-                this.eliminarDeCalculadora(t);
-                this.tours.set(this.tours().filter((val) => val.id !== t.id));
-                this.saveToLocal();
-                this.messageService.add({ severity: 'info', summary: 'Eliminado', detail: 'Registro borrado' });
+                this.activityService.deleteActivity(t.id!.toString()).subscribe(() => {
+                    this.eliminarDeCalculadora(t);
+                    this.loadData();
+                    this.messageService.add({ severity: 'info', summary: 'Eliminado', detail: 'Registro borrado' });
+                });
             }
         });
     }
 
-    calcularTotal() { return this.tours().reduce((acc, t) => acc + (t.precio || 0), 0); }
-    openNew() { this.tour = { valoracion: 0, estado: 'Visto', precio: 0, fecha: new Date() }; this.tourDialog = true; }
-    editTour(t: Tour) { this.tour = { ...t }; this.tourDialog = true; }
+    calcularTotal() {
+        return this.tours().reduce((acc, t) => acc + (t.precio || 0), 0);
+    }
+
+    openNew() {
+        this.tour = { valoracion: 0, estado: 'Visto', precio: 0, fecha: new Date() };
+        this.tourDialog = true;
+    }
+
+    editTour(t: Tour) {
+        this.tour = { ...t };
+        this.tourDialog = true;
+    }
+
     hideDialog() { this.tourDialog = false; }
+
     getSeverityStatus(status: any): any {
         const map: any = { 'Reservado': 'success', 'Pendiente': 'warn', 'Visto': 'info', 'Descartado': 'danger' };
         return map[status] || 'secondary';

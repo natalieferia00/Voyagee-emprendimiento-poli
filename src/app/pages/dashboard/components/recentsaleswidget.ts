@@ -1,120 +1,105 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { RippleModule } from 'primeng/ripple';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
-
-interface Gasto {
-    id: number;
-    categoria: string;
-    descripcion: string;
-    monto: number;
-    estado: string; 
-}
-
-interface Destino {
-    id: number;
-    nombre: string;
-    presupuestoAsignado: number;
-    gastos: Gasto[];
-}
+import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
     standalone: true,
     selector: 'app-recent-sales-widget', 
-    imports: [CommonModule, TableModule, ButtonModule, RippleModule, CurrencyPipe], 
+    imports: [CommonModule, TableModule, ButtonModule, RippleModule, CurrencyPipe, TooltipModule], 
     template: `
-        <div class="card mb-0">
-            <div class="flex justify-between items-center mb-4">
-                <div class="font-semibold text-xl text-slate-700">Resumen de Inversión por Destino</div>
-                <p-button icon="pi pi-refresh" [rounded]="true" [text]="true" (onClick)="loadFromStorage()"></p-button>
+        <div class="card mb-0 shadow-sm border-round bg-white">
+            <div class="flex justify-between items-center mb-4 p-2">
+                <div>
+                    <div class="font-bold text-xl text-slate-800">Gasto por Categoría</div>
+                    <p class="text-sm text-slate-500">Inversión total acumulada en el viaje</p>
+                </div>
+                <p-button icon="pi pi-sync" [rounded]="true" [text]="true" (onClick)="loadFromStorage()" pTooltip="Actualizar"></p-button>
             </div>
             
-            <p-table [value]="destinations" [paginator]="true" [rows]="5" responsiveLayout="scroll" styleClass="p-datatable-sm">
+            <p-table [value]="categorySummary" responsiveLayout="scroll" styleClass="p-datatable-sm">
                 <ng-template pTemplate="header">
                     <tr class="text-slate-400 text-xs uppercase">
-                        <th style="width: 4rem"></th> 
-                        <th pSortableColumn="nombre">Destino <p-sortIcon field="nombre"></p-sortIcon></th>
-                        <th>Estado Presupuesto</th>
-                        <th pSortableColumn="montoTotal" class="text-right">Total Reservado <p-sortIcon field="montoTotal"></p-sortIcon></th>
+                        <th style="width: 3rem"></th>
+                        <th>Categoría</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-right">Total Gastado</th>
                     </tr>
                 </ng-template>
-                <ng-template pTemplate="body" let-destination>
+                <ng-template pTemplate="body" let-cat>
                     <tr class="hover:bg-slate-50 transition-colors">
                         <td>
-                            <div class="flex items-center justify-center bg-emerald-100 dark:bg-emerald-400/10 rounded-lg" style="width: 2.5rem; height: 2.5rem">
-                                <i class="pi pi-map-marker text-emerald-600"></i>
+                            <div [class]="'flex items-center justify-center rounded-lg w-9 h-9 ' + cat.bgColor + ' ' + cat.textColor">
+                                <i [class]="cat.icon"></i>
                             </div>
                         </td>
-                        <td style="width: 40%;">
-                            <span class="font-bold text-slate-800">{{ destination.nombre }}</span>
+                        <td>
+                            <span class="font-bold text-slate-700">{{ cat.nombre }}</span>
                         </td> 
-                        <td style="width: 30%;">
-                            <span [class]="getBadgeClass(destination)">
-                                {{ getStatus(destination) }}
+                        <td class="text-center">
+                            <span [class]="getBadgeClass(cat.total)">
+                                {{ getStatus(cat.total) }}
                             </span>
                         </td>
-                        <td style="width: 30%;" class="text-right font-black text-slate-900">
-                            {{ calculateTotal(destination) | currency: 'USD' }}
+                        <td class="text-right font-black text-slate-900">
+                            {{ cat.total | currency: 'USD':'symbol':'1.0-0' }}
                         </td> 
-                    </tr>
-                </ng-template>
-                <ng-template pTemplate="emptymessage">
-                    <tr>
-                        <td colspan="4" class="text-center p-8 text-slate-500 font-medium">
-                            No hay destinos con reservas activas.
-                        </td>
                     </tr>
                 </ng-template>
             </p-table>
         </div>`,
 })
 export class RecentSalesWidget implements OnInit, OnDestroy { 
-    destinations: Destino[] = []; 
+    categorySummary: any[] = []; 
+    private cdr = inject(ChangeDetectorRef);
     private readonly LS_KEY = 'mis_destinos_data_v2';
+
+    // Definición de las categorías con sus estilos
+    private categoriasDef = [
+        { id: 'Vuelos', nombre: 'Transporte Aéreo', icon: 'pi pi-send', bgColor: 'bg-orange-50', textColor: 'text-orange-600' },
+        { id: 'Hospedaje', nombre: 'Alojamiento', icon: 'pi pi-home', bgColor: 'bg-purple-50', textColor: 'text-purple-600' },
+        { id: 'Transporte', nombre: 'Movilidad Local', icon: 'pi pi-car', bgColor: 'bg-blue-50', textColor: 'text-blue-600' },
+        { id: 'Comida', nombre: 'Alimentación', icon: 'pi pi-utensils', bgColor: 'bg-emerald-50', textColor: 'text-emerald-600' },
+        { id: 'Otros', nombre: 'Gastos Varios', icon: 'pi pi-tag', bgColor: 'bg-slate-50', textColor: 'text-slate-600' }
+    ];
 
     ngOnInit() {
         this.loadFromStorage();
         window.addEventListener('storage', () => this.loadFromStorage());
-        // Escucha adicional para eventos personalizados de la app
-        window.addEventListener('local-data-updated', () => this.loadFromStorage());
     }
 
     ngOnDestroy() {
         window.removeEventListener('storage', () => this.loadFromStorage());
-        window.removeEventListener('local-data-updated', () => this.loadFromStorage());
     }
 
     loadFromStorage() {
-        const data = localStorage.getItem(this.LS_KEY) ?? '[]';
-        this.destinations = JSON.parse(data);
+        const dataStr = localStorage.getItem(this.LS_KEY) ?? '[]';
+        const destinos: any[] = JSON.parse(dataStr);
+
+        // Mapeamos las categorías y sumamos los montos de TODOS los destinos
+        this.categorySummary = this.categoriasDef.map(cat => {
+            const totalAcumulado = destinos.reduce((acc, dest) => {
+                const gastosCat = (dest.gastos || []).filter((g: any) => g.categoria === cat.id);
+                return acc + gastosCat.reduce((sum: number, g: any) => sum + (Number(g.monto) || 0), 0);
+            }, 0);
+
+            return { ...cat, total: totalAcumulado };
+        });
+
+        this.cdr.detectChanges();
     }
 
-    // LÓGICA VOYAGEE: Solo sumamos lo que está 'Reservado'
-    calculateTotal(destino: Destino): number {
-        return (destino.gastos || [])
-            .filter(g => g.estado === 'Reservado')
-            .reduce((acc, g) => acc + (g.monto || 0), 0);
+    getStatus(total: number): string {
+        if (total === 0) return 'SIN GASTOS';
+        // Lógica de alerta si una categoría supera los $1,000 (ajustable)
+        return total > 1000 ? 'ALTO' : 'ÓPTIMO';
     }
 
-    getStatus(destino: Destino): string {
-        const total = this.calculateTotal(destino);
-        if (total === 0) return 'SIN RESERVAS';
-      
-        return total > (destino.presupuestoAsignado || 0) && destino.presupuestoAsignado > 0 
-            ? 'EXCEDIDO' 
-            : 'DENTRO DEL LÍMITE';
-    }
-
-    // MÉTODO QUE DABA EL ERROR: Ahora asegurado
-    getBadgeClass(destino: Destino): string {
-        const total = this.calculateTotal(destino);
+    getBadgeClass(total: number): string {
         const base = 'px-3 py-1 rounded-full text-[10px] font-black uppercase ';
-        
-        if (total === 0) return base + 'bg-slate-100 text-slate-500';
-        
-        return total > (destino.presupuestoAsignado || 0) && destino.presupuestoAsignado > 0
-            ? base + 'bg-red-100 text-red-600 dark:bg-red-400/10' 
-            : base + 'bg-emerald-100 text-emerald-600 dark:bg-emerald-400/10';
+        if (total === 0) return base + 'bg-slate-100 text-slate-400';
+        return total > 1000 ? base + 'bg-red-100 text-red-600' : base + 'bg-emerald-100 text-emerald-600';
     }
 }

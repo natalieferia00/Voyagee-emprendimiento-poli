@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, HostListener, inject } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { TableModule } from 'primeng/table';
 import { CommonModule, CurrencyPipe } from '@angular/common';
@@ -16,11 +16,11 @@ import { IconFieldModule } from 'primeng/iconfield';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { TooltipModule } from 'primeng/tooltip';
-
-type SeverityType = "success" | "secondary" | "info" | "warn" | "danger" | "contrast" | undefined;
+import { TransportService } from '../service/transport.service';
 
 interface Viaje {
     id?: string;
+    _id?: string;
     origen?: string;
     destino?: string;
     medioTransporte?: string;
@@ -29,7 +29,6 @@ interface Viaje {
     urlProveedor?: string;
     descripcion?: string;
     registradoEnCalculadora?: boolean;
-    refGastoId?: number;
 }
 
 @Component({
@@ -42,169 +41,217 @@ interface Viaje {
         ConfirmDialogModule, InputNumberModule, TooltipModule
     ],
     providers: [MessageService, ConfirmationService, CurrencyPipe],
-    templateUrl: './gestiondetransporte.html'
+    template: `
+        <p-toast />
+        <p-confirmdialog />
+
+        <div class="card">
+            <div class="flex justify-between items-center mb-4">
+                <div class="font-semibold text-xl text-800">Logística de Transporte</div>
+                <p-tag severity="contrast" [style]="{'font-size': '1.1rem', 'padding': '8px 15px'}" 
+                       [value]="'Gasto Transporte: ' + (calcularTotal() | currency:'USD')" />
+            </div>
+
+            <p-toolbar styleClass="mb-6">
+                <ng-template #start>
+                    <p-button label="Nuevo Viaje" icon="pi pi-plus" severity="success" (onClick)="openNew()" />
+                </ng-template>
+            </p-toolbar>
+
+            <p-table [value]="viajes()" [rows]="10" [paginator]="true" [rowHover]="true">
+                <ng-template #header>
+                    <tr>
+                        <th>Origen ➔ Destino</th>
+                        <th>Medio</th>
+                        <th>Costo</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </ng-template>
+                <ng-template #body let-v>
+                    <tr>
+                        <td>
+                            <div class="font-bold">{{v.origen}} <i class="pi pi-arrow-right text-xs mx-1"></i> {{v.destino}}</div>
+                            <a *ngIf="v.urlProveedor" [href]="v.urlProveedor" target="_blank" class="text-xs text-blue-500 underline">Ver Reserva</a>
+                        </td>
+                        <td><p-tag [value]="v.medioTransporte" severity="secondary" /></td>
+                        <td class="font-bold text-primary">{{v.costo | currency:'USD'}}</td>
+                        <td>
+                            <p-select [(ngModel)]="v.estado" [options]="estados" optionLabel="label" optionValue="value" 
+                                      (onChange)="onStatusChange(v)" styleClass="w-full border-none bg-transparent" appendTo="body">
+                                <ng-template #selectedItem let-item>
+                                    <p-tag [value]="item.label.toUpperCase()" [severity]="getSeverity(item.value)" />
+                                </ng-template>
+                            </p-select>
+                        </td>
+                        <td>
+                            <div class="flex gap-2">
+                                <p-button icon="pi pi-pencil" [rounded]="true" [outlined]="true" (onClick)="editViaje(v)" />
+                                <p-button icon="pi pi-trash" severity="danger" [rounded]="true" [outlined]="true" (onClick)="deleteViaje(v)" />
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+
+            <p-dialog header="Sumar a la Calculadora" [(visible)]="destinosDialog" [modal]="true" [style]="{width: '350px'}">
+                <div class="flex flex-col gap-4">
+                    <p class="text-sm">¿A qué destino pertenece este gasto de transporte?</p>
+                    <p-select [options]="listaDestinos" [(ngModel)]="destinoSeleccionado" optionLabel="nombre" placeholder="Selecciona destino" styleClass="w-full" appendTo="body"></p-select>
+                    <p-button label="Confirmar" icon="pi pi-check" (onClick)="confirmarVinculacion()" [disabled]="!destinoSeleccionado" severity="success"></p-button>
+                </div>
+            </p-dialog>
+
+            <p-dialog [(visible)]="viajeDialog" [style]="{ width: '450px' }" header="Detalles del Transporte" [modal]="true">
+                <div class="flex flex-col gap-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="flex flex-col gap-2">
+                            <label class="font-bold">Origen</label>
+                            <input pInputText [(ngModel)]="viaje.origen" />
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <label class="font-bold">Destino</label>
+                            <input pInputText [(ngModel)]="viaje.destino" />
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="flex flex-col gap-2">
+                            <label class="font-bold">Medio</label>
+                            <p-select [(ngModel)]="viaje.medioTransporte" [options]="mediosTransporte" optionLabel="label" optionValue="value" />
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <label class="font-bold">Costo (USD)</label>
+                            <p-inputnumber [(ngModel)]="viaje.costo" mode="currency" currency="USD" locale="en-US" />
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <label class="font-bold">Proveedor / URL</label>
+                        <input pInputText [(ngModel)]="viaje.urlProveedor" placeholder="https://..." />
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <label class="font-bold">Notas</label>
+                        <textarea pTextarea [(ngModel)]="viaje.descripcion" rows="3"></textarea>
+                    </div>
+                </div>
+                <ng-template #footer>
+                    <p-button label="Cancelar" [text]="true" (onClick)="hideDialog()" />
+                    <p-button label="Guardar" icon="pi pi-save" (onClick)="saveViaje()" severity="success" />
+                </ng-template>
+            </p-dialog>
+        </div>
+    `
 })
 export class Gestiondetransporte implements OnInit {
-    viajeDialog: boolean = false;
+    private transportService = inject(TransportService);
+    private messageService = inject(MessageService);
+    private confirmationService = inject(ConfirmationService);
+
     viajes = signal<Viaje[]>([]);
     viaje: Viaje = {};
-    submitted: boolean = false;
-
+    viajeDialog: boolean = false;
     destinosDialog: boolean = false;
     listaDestinos: any[] = [];
     destinoSeleccionado: any = null;
     viajePendiente: Viaje | null = null;
-
-    private readonly LS_CALC = 'mis_destinos_data_v2';
-    private readonly LS_TRANS = 'mis_transporte_data_v1';
-
-    private messageService = inject(MessageService);
-    private confirmationService = inject(ConfirmationService);
-
-    @HostListener('window:storage')
-    onExternalUpdate() { this.loadViajes(); }
+    submitted: boolean = false;
 
     mediosTransporte = [
         { label: 'Aéreo', value: 'Aéreo' },
         { label: 'Marítimo', value: 'Marítimo' },
         { label: 'Terrestre', value: 'Terrestre' },
-        { label: 'Alquiler / Taxi', value: 'Alquiler' }
+        { label: 'Alquiler', value: 'Alquiler' }
     ];
 
     estados = [
         { label: 'Pendiente', value: 'pendiente' },
         { label: 'Visto', value: 'visto' },
-        { label: 'Reservado', value: 'reservado' },
-        { label: 'Cancelado', value: 'cancelado' }
+        { label: 'Reservado', value: 'reservado' }
     ];
 
-    ngOnInit() { this.loadViajes(); }
+    private readonly LS_CALC = 'mis_destinos_data_v2';
 
-    loadViajes() {
-        const saved = localStorage.getItem(this.LS_TRANS);
-        if (saved) this.viajes.set(JSON.parse(saved));
+    ngOnInit() { this.loadData(); }
+
+    loadData() {
+        this.transportService.getTransports().subscribe(data => {
+            this.viajes.set(data.map(t => ({ ...t, id: t._id })));
+        });
     }
 
-    getSeverity(status: string | undefined): SeverityType {
-        switch (status) {
-            case 'reservado': return 'success';
-            case 'visto': return 'info';
-            case 'pendiente': return 'warn';
-            case 'cancelado': return 'danger';
-            default: return 'secondary';
+    saveViaje() {
+        if (!this.viaje.origen || !this.viaje.destino) return;
+        const body = { ...this.viaje, _id: this.viaje.id };
+        this.transportService.saveTransport(body).subscribe(res => {
+            this.messageService.add({ severity: 'success', summary: 'Guardado' });
+            this.loadData();
+            if (this.viaje.estado === 'reservado' && !this.viaje.registradoEnCalculadora) {
+                this.abrirVinculacion({ ...this.viaje, id: res._id });
+            }
+            this.viajeDialog = false;
+        });
+    }
+
+    onStatusChange(v: Viaje) {
+        if (v.estado === 'reservado' && !v.registradoEnCalculadora) {
+            this.abrirVinculacion(v);
+        } else if (v.estado !== 'reservado' && v.registradoEnCalculadora) {
+            this.syncCalculadora(v, 'delete');
         }
+        this.transportService.saveTransport({ ...v, _id: v.id }).subscribe();
     }
 
-    onStatusChange(viaje: Viaje) {
-        if (viaje.estado === 'reservado' && !viaje.registradoEnCalculadora) {
-            this.abrirVinculacion(viaje);
-        } else if (viaje.estado !== 'reservado' && viaje.registradoEnCalculadora) {
-            this.eliminarGastoDeCalculadora(viaje);
-        }
-        this.saveToLocal();
-    }
-
-    abrirVinculacion(viaje: Viaje) {
+    abrirVinculacion(v: Viaje) {
         const data = localStorage.getItem(this.LS_CALC);
         this.listaDestinos = data ? JSON.parse(data) : [];
-        if (this.listaDestinos.length === 0) {
-            this.messageService.add({ severity: 'warn', summary: 'Info', detail: 'Crea un destino en la calculadora primero' });
-            viaje.estado = 'pendiente';
-            return;
-        }
-        this.viajePendiente = viaje;
+        if (this.listaDestinos.length === 0) return;
+        this.viajePendiente = v;
         this.destinosDialog = true;
     }
 
     confirmarVinculacion() {
         if (!this.viajePendiente || !this.destinoSeleccionado) return;
-        const dataCalculadora = JSON.parse(localStorage.getItem(this.LS_CALC) || '[]');
-        const index = dataCalculadora.findIndex((d: any) => d.id === this.destinoSeleccionado.id);
-        
-        if (index !== -1) {
-            const gastoId = Date.now();
-            if (!dataCalculadora[index].gastos) dataCalculadora[index].gastos = [];
-            
-            dataCalculadora[index].gastos.push({
-                id: gastoId,
-                refId: this.viajePendiente.id,
-                categoria: 'Transporte',
-                descripcion: `Transp: ${this.viajePendiente.medioTransporte} (${this.viajePendiente.origen} ➔ ${this.viajePendiente.destino})`,
-                monto: this.viajePendiente.costo || 0
-            });
-
-            localStorage.setItem(this.LS_CALC, JSON.stringify(dataCalculadora));
-            window.dispatchEvent(new Event('storage'));
-            
-            this.viajePendiente.registradoEnCalculadora = true;
-            this.viajePendiente.refGastoId = gastoId;
-            this.saveToLocal();
-            this.messageService.add({ severity: 'success', summary: 'Sincronizado', detail: 'Costo añadido al presupuesto' });
-        }
+        this.syncCalculadora(this.viajePendiente, 'add');
+        this.viajePendiente.registradoEnCalculadora = true;
+        this.transportService.saveTransport({ ...this.viajePendiente, _id: this.viajePendiente.id }).subscribe();
         this.destinosDialog = false;
     }
 
-    eliminarGastoDeCalculadora(viaje: Viaje) {
-        const dataCalc = JSON.parse(localStorage.getItem(this.LS_CALC) || '[]');
-        let huboCambio = false;
-        dataCalc.forEach((destino: any) => {
-            if (destino.gastos) {
-                const originalLen = destino.gastos.length;
-                destino.gastos = destino.gastos.filter((g: any) => g.refId !== viaje.id && g.id !== viaje.refGastoId);
-                if (destino.gastos.length !== originalLen) huboCambio = true;
+    private syncCalculadora(v: Viaje, action: 'add' | 'delete') {
+        const data = JSON.parse(localStorage.getItem(this.LS_CALC) || '[]');
+        if (action === 'add') {
+            const idx = data.findIndex((d: any) => d.id === this.destinoSeleccionado.id);
+            if (idx !== -1) {
+                if (!data[idx].gastos) data[idx].gastos = [];
+                data[idx].gastos.push({ id: Date.now(), refId: v.id, categoria: 'Transporte', descripcion: `Viaje: ${v.origen}-${v.destino}`, monto: v.costo || 0 });
             }
-        });
-        if (huboCambio) {
-            localStorage.setItem(this.LS_CALC, JSON.stringify(dataCalc));
-            window.dispatchEvent(new Event('storage'));
-        }
-        viaje.registradoEnCalculadora = false;
-        viaje.refGastoId = undefined;
-    }
-
-    saveViaje() {
-        this.submitted = true;
-        if (!this.viaje.origen?.trim() || !this.viaje.destino?.trim()) return;
-
-        let _viajes = [...this.viajes()];
-        if (this.viaje.id) {
-            const index = _viajes.findIndex(v => v.id === this.viaje.id);
-            _viajes[index] = this.viaje;
         } else {
-            this.viaje.id = Date.now().toString();
-            _viajes.push(this.viaje);
+            data.forEach((d: any) => {
+                if (d.gastos) d.gastos = d.gastos.filter((g: any) => g.refId !== v.id);
+            });
         }
-
-        this.viajes.set(_viajes);
-        this.saveToLocal();
-
-        if (this.viaje.estado === 'reservado') {
-            this.onStatusChange(this.viaje);
-        } else if (this.viaje.registradoEnCalculadora) {
-            this.eliminarGastoDeCalculadora(this.viaje);
-        }
-
-        this.viajeDialog = false;
-        this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Información guardada' });
+        localStorage.setItem(this.LS_CALC, JSON.stringify(data));
+        window.dispatchEvent(new Event('storage'));
     }
 
-    deleteViaje(viaje: Viaje) {
+    deleteViaje(v: Viaje) {
         this.confirmationService.confirm({
-            message: `¿Eliminar transporte a ${viaje.destino}?`,
-            header: 'Confirmar acción',
-            icon: 'pi pi-exclamation-triangle',
+            message: '¿Eliminar transporte?',
             accept: () => {
-                this.eliminarGastoDeCalculadora(viaje);
-                this.viajes.set(this.viajes().filter((val) => val.id !== viaje.id));
-                this.saveToLocal();
-                this.messageService.add({ severity: 'info', summary: 'Borrado', detail: 'Registro eliminado' });
+                this.transportService.deleteTransport(v.id!).subscribe(() => {
+                    this.syncCalculadora(v, 'delete');
+                    this.loadData();
+                });
             }
         });
     }
 
-    saveToLocal() { localStorage.setItem(this.LS_TRANS, JSON.stringify(this.viajes())); }
     calcularTotal() { return this.viajes().reduce((acc, v) => acc + (v.costo || 0), 0); }
-    openNew() { this.viaje = { estado: 'pendiente' }; this.submitted = false; this.viajeDialog = true; }
-    editViaje(viaje: Viaje) { this.viaje = { ...viaje }; this.viajeDialog = true; }
+    getSeverity(s: any) {
+        if (s === 'reservado') return 'success';
+        if (s === 'visto') return 'info';
+        return 'warn';
+    }
+    openNew() { this.viaje = { estado: 'pendiente' }; this.viajeDialog = true; }
+    editViaje(v: Viaje) { this.viaje = { ...v }; this.viajeDialog = true; }
     hideDialog() { this.viajeDialog = false; }
 }

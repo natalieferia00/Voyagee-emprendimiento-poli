@@ -1,1 +1,112 @@
-<p>lista-viaje works!</p>
+<div class="card border-none shadow-1 bg-slate-50/50 p-4">
+    <p-toolbar styleClass="mb-4 bg-white border-round-xl shadow-sm border-1 border-slate-200">
+        <div class="p-toolbar-group-left">
+            <div class="flex flex-column">
+                <h2 class="font-black text-2xl m-0 text-slate-800 tracking-tight">Checklist Equipaje</h2>
+                <small class="text-slate-400 font-medium">Organiza tu maleta y no olvides nada</small>
+            </div>
+        </div>
+        <div class="p-toolbar-group-right">
+            <p-button 
+                icon="pi pi-plus" 
+                label="Agregar Artículo" 
+                severity="success"
+                [raised]="true"
+                (onClick)="showForm()">
+            </p-button>
+        </div>
+    </p-toolbar>
+
+    <div class="bg-white border-round-xl shadow-sm overflow-hidden border-1 border-slate-200">
+        <p-treeTable 
+            [value]="treeTableValue" 
+            [columns]="cols"
+            selectionMode="checkbox" 
+            [(selectionKeys)]="selectedTreeTableValue"
+            (selectionKeysChange)="onSelectionChange($event)"
+            dataKey="key"
+            [scrollable]="true" 
+            scrollHeight="500px"
+            styleClass="p-treetable-sm">
+
+            <ng-template pTemplate="header" let-columns>
+                <tr class="text-slate-500 uppercase text-xs font-bold bg-slate-50">
+                    <th *ngFor="let col of columns" [style.width]="col.field === 'size' ? '15%' : (col.field === 'type' ? '25%' : 'auto')">
+                        {{ col.header }}
+                    </th>
+                    <th style="width: 8rem" class="text-center text-slate-500">ACCIONES</th>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-rowNode let-rowData="rowData" let-columns="columns">
+                <tr [ttRow]="rowNode" class="hover:bg-slate-50 transition-colors border-bottom-1 border-slate-100">
+                    <td *ngFor="let col of columns; let i = index">
+                        <span class="flex align-items-center gap-3">
+                            <p-treeTableCheckbox [value]="rowNode" *ngIf="i === 0"></p-treeTableCheckbox>
+                            <span [ngClass]="{'line-through text-slate-400 italic': isSelected(rowNode.node.key)}" class="text-slate-700 font-medium">
+                                {{ rowData[col.field] }}
+                            </span>
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <div class="flex justify-content-center gap-1">
+                            <p-button icon="pi pi-pencil" [text]="true" severity="warn" (onClick)="editNode(rowNode.node)" pTooltip="Editar"></p-button>
+                            <p-button icon="pi pi-trash" [text]="true" severity="danger" (onClick)="deleteNode(rowNode.node)" pTooltip="Eliminar"></p-button>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td [attr.colspan]="cols.length + 1" class="text-center p-8 text-slate-400">
+                        <i class="pi pi-shopping-bag text-4xl mb-3 block opacity-20"></i>
+                        <p class="m-0 font-medium text-lg">Tu maleta está vacía.</p>
+                        <p class="text-sm">¡Comienza a agregar artículos para tu viaje!</p>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-treeTable>
+    </div>
+
+   <p-dialog 
+    [header]="isEditing ? 'Editar Artículo' : 'Nuevo Artículo'" 
+    [(visible)]="displayForm" 
+    [modal]="true" 
+    [style]="{ width: '28rem' }" 
+    [draggable]="false" 
+    [resizable]="false"
+    styleClass="p-fluid">
+    
+    <div class="p-3">
+        <div class="flex flex-column gap-4">
+            
+            <div class="flex flex-column gap-2">
+                <label for="name" class="font-bold text-slate-700">¿Qué llevas?</label>
+                <input pInputText id="name" [(ngModel)]="newNode.name" 
+                       placeholder="Ej. Pasaporte, Camisas..." autofocus />
+            </div>
+            
+            <div class="flex flex-column gap-2">
+                <label for="size" class="font-bold text-slate-700">Cantidad</label>
+                <input pInputText id="size" [(ngModel)]="newNode.size" 
+                       placeholder="Ej. 1, 3 pares..." />
+            </div>
+            
+            <div class="flex flex-column gap-2">
+                <label for="type" class="font-bold text-slate-700">Categoría / Nota</label>
+                <input pInputText id="type" [(ngModel)]="newNode.type" 
+                       placeholder="Ej. Documentos, Ropa..." />
+            </div>
+
+        </div>
+    </div>
+
+    <ng-template pTemplate="footer">
+        <div class="flex justify-content-end gap-2 pr-2 pb-2">
+            <p-button label="Cancelar" [text]="true" severity="secondary" (onClick)="displayForm = false"></p-button>
+            <p-button label="Guardar" icon="pi pi-check" severity="success" (onClick)="saveNode()" [disabled]="!newNode.name"></p-button>
+        </div>
+    </ng-template>
+</p-dialog>
+</div>

@@ -1,0 +1,95 @@
+<p-toast />
+<p-confirmdialog />
+
+<div class="p-4 md:p-8 bg-slate-50 min-h-screen">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+        <div class="bg-gray-900 rounded-3xl p-6 shadow-2xl text-white">
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-gray-400 font-semibold uppercase text-xs tracking-widest">Presupuesto Global</span>
+                <i class="pi pi-cloud-upload text-gray-500 cursor-pointer hover:text-white" (click)="saveGlobalBudget()" pTooltip="Sincronizar con DB"></i>
+            </div>
+            <div class="flex items-baseline gap-2">
+                <span class="text-lg text-gray-500">$</span>
+                <input type="number" 
+                       [ngModel]="presupuestoGlobal()" 
+                       (ngModelChange)="presupuestoGlobal.set($event)"
+                       (blur)="saveGlobalBudget()"
+                       class="bg-transparent border-none text-4xl font-black w-full focus:ring-0 text-white outline-none" />
+            </div>
+        </div>
+
+        <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+            <span class="text-gray-400 font-semibold uppercase text-xs tracking-widest block mb-4">Inversión Reservada</span>
+            <div class="text-4xl font-black text-gray-800">{{ totalGastado() | currency:'USD':'symbol':'1.0-0' }}</div>
+            <div class="mt-4">
+                <p-tag [severity]="totalGastado() > presupuestoGlobal() ? 'danger' : 'success'" 
+                       [value]="totalGastado() > presupuestoGlobal() ? 'Presupuesto Excedido' : 'Dentro del Límite'" />
+            </div>
+        </div>
+
+        <div class="bg-emerald-500 rounded-3xl p-6 shadow-xl text-white">
+            <span class="text-emerald-100 font-semibold uppercase text-xs tracking-widest block mb-4">Saldo Disponible</span>
+            <div class="text-4xl font-black">{{ (presupuestoGlobal() - totalGastado()) | currency:'USD':'symbol':'1.0-0' }}</div>
+            <div class="h-2 bg-emerald-700/30 rounded-full mt-6 overflow-hidden">
+                <div class="h-full bg-white transition-all duration-700" 
+                     [style.width.%]="(totalGastado() / (presupuestoGlobal() || 1)) * 100"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+            <h2 class="text-3xl font-black text-gray-800">Itinerario de Gastos</h2>
+            <p class="text-gray-500">Administra los presupuestos detallados por destino.</p>
+        </div>
+        <p-button label="Agregar Parada" icon="pi pi-map-marker" [rounded]="true" severity="contrast" (onClick)="displayDestino = true" />
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+        @for (d of destinos(); track d._id) {
+            <div class="group bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-2xl transition-all p-6 relative overflow-hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <div class="flex items-center gap-3">
+                        <div class="p-3 bg-blue-50 text-blue-600 rounded-2xl"><i class="pi pi-compass"></i></div>
+                        <span class="font-bold text-gray-700 uppercase">{{ d.nombre }}</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <p-button icon="pi pi-plus" [text]="true" severity="success" (onClick)="abrirGasto(d)" pTooltip="Nuevo Gasto" />
+                        <p-button icon="pi pi-trash" [text]="true" severity="danger" (onClick)="eliminarDestino(d)" />
+                    </div>
+                </div>
+                <div class="flex justify-between items-end mb-6">
+                    <span class="text-gray-400 text-sm font-medium">Gastado aquí</span>
+                    <span class="text-2xl font-black text-slate-800">{{ sumarGastos(d) | currency:'USD':'symbol':'1.0-0' }}</span>
+                </div>
+                <p-button label="Ver Detalles" [outlined]="true" severity="secondary" styleClass="w-full rounded-2xl" (onClick)="verDetalleDestino(d)" />
+            </div>
+        }
+    </div>
+</div>
+
+<p-dialog header="Nueva Parada en el Viaje" [(visible)]="displayDestino" [modal]="true" [style]="{width: '400px'}">
+    <div class="flex flex-col gap-4 pt-4">
+        <label class="font-bold text-sm">Nombre de la ciudad/destino</label>
+        <input pInputText type="text" [(ngModel)]="tempDestino.nombre" placeholder="Ej: Tokio, Japón" class="w-full" />
+        <p-button label="Crear Destino" (onClick)="guardarDestino()" [disabled]="!tempDestino.nombre" severity="success" styleClass="w-full" />
+    </div>
+</p-dialog>
+
+<p-dialog header="Vincular Gasto a Destino" [(visible)]="displayGasto" [modal]="true" [style]="{width: '420px'}">
+    <div class="flex flex-col gap-5 pt-4">
+        <div class="flex flex-col gap-2">
+            <label class="font-bold text-sm">Categoría</label>
+            <p-select [options]="categorias" [(ngModel)]="tempGasto.categoria" optionLabel="label" optionValue="value" styleClass="w-full" appendTo="body" />
+        </div>
+        <div class="flex flex-col gap-2">
+            <label class="font-bold text-sm">Concepto</label>
+            <input pInputText type="text" [(ngModel)]="tempGasto.descripcion" placeholder="Ej: Reserva Hotel Central" />
+        </div>
+        <div class="flex flex-col gap-2">
+            <label class="font-bold text-sm">Valor (USD)</label>
+            <p-inputNumber [(ngModel)]="tempGasto.monto" mode="currency" currency="USD" locale="en-US" styleClass="w-full" />
+        </div>
+        <p-button label="Confirmar Gasto" (onClick)="guardarGasto()" severity="success" styleClass="w-full mt-2" />
+    </div>
+</p-dialog>

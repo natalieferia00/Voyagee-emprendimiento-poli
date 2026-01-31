@@ -1,25 +1,36 @@
+<p-toast />
+
 <div class="card shadow-1 border-none bg-white">
     <div class="flex flex-column md:flex-row justify-content-between align-items-start md:align-items-center mb-5 gap-3">
         <div>
             <h2 class="m-0 text-xl font-bold text-900">Documentación y Otros Gastos</h2>
             <p class="text-600 m-0 text-sm">
-                Control administrativo independiente. <b>Nota:</b> Para que estos costos afecten su presupuesto global, 
-                debe ingresarlos <u>manualmente</u> como un gasto en el <b>Centro de Control Presupuestario/presupuesto</b>.
+                Gestión administrativa de seguros y trámites. 
+                <span class="text-green-600 font-medium">
+                    <i class="pi pi-sync"></i> Sincronizado automáticamente con el presupuesto global.
+                </span>
             </p>
         </div>
-        <p-button 
-            label="Nuevo Registro" 
-            icon="pi pi-plus" 
-            (click)="abrirModal()" 
-            severity="success">
-        </p-button>
+        <div class="flex gap-3 align-items-center">
+            <div class="hidden md:flex flex-column align-items-end mr-3">
+                <span class="text-xs text-500 font-medium uppercase">Inversión en Documentos</span>
+                <span class="text-xl font-bold text-900">{{ formatCurrency(totalAcumulado()) }}</span>
+            </div>
+            <p-button 
+                label="Nuevo Registro" 
+                icon="pi pi-plus" 
+                (click)="abrirModal()" 
+                severity="success"
+                [raised]="true">
+            </p-button>
+        </div>
     </div>
 
     <p-table 
         [value]="documentos()" 
         [scrollable]="true" 
         scrollHeight="450px" 
-        styleClass="p-datatable-sm p-datatable-gridlines"
+        styleClass="p-datatable-sm p-datatable-gridlines p-datatable-striped"
         [tableStyle]="{'width': '100%'}">
         
         <ng-template pTemplate="header">
@@ -38,15 +49,26 @@
         <ng-template pTemplate="body" let-doc>
             <tr class="text-sm">
                 <td class="text-center">
-                    <p-checkbox [(ngModel)]="doc.reservadoComprado" [binary]="true" (onChange)="toggleEstado()"></p-checkbox>
+                    <p-checkbox 
+                        [(ngModel)]="doc.reservadoComprado" 
+                        [binary]="true" 
+                        (onChange)="toggleEstado(doc)">
+                    </p-checkbox>
                 </td>
                 <td class="font-medium text-900">{{ doc.nombre }}</td>
                 <td class="text-600">{{ doc.entidad }}</td>
                 <td class="text-center">
-                    <p-button *ngIf="doc.descripcion" icon="pi pi-eye" [text]="true" severity="secondary" [pTooltip]="doc.descripcion"></p-button>
+                    <p-button 
+                        *ngIf="doc.descripcion" 
+                        icon="pi pi-eye" 
+                        [text]="true" 
+                        severity="secondary" 
+                        [pTooltip]="doc.descripcion"
+                        tooltipPosition="top">
+                    </p-button>
                 </td>
                 <td class="text-center">
-                    <a *ngIf="doc.url" [href]="doc.url" target="_blank">
+                    <a *ngIf="doc.url" [href]="doc.url" target="_blank" rel="noopener noreferrer">
                         <p-button icon="pi pi-link" [text]="true" severity="info"></p-button>
                     </a>
                 </td>
@@ -58,29 +80,49 @@
                     </span>
                 </td>
                 <td class="text-center">
-                    <p-button icon="pi pi-trash" [text]="true" severity="danger" (click)="eliminar(doc.id)"></p-button>
+                    <p-button 
+                        icon="pi pi-trash" 
+                        [text]="true" 
+                        severity="danger" 
+                        (click)="eliminar(doc._id)">
+                    </p-button>
                 </td>
                 <td class="text-right" [ngClass]="{'text-green-700 font-bold': doc.reservadoComprado}">
                     {{ formatCurrency(doc.costo) }}
                 </td>
             </tr>
         </ng-template>
+
+        <ng-template pTemplate="footer">
+            <tr>
+                <td colspan="7" class="text-right font-bold">Total Pagado:</td>
+                <td class="text-right text-green-700 font-bold text-lg">{{ formatCurrency(totalAcumulado()) }}</td>
+            </tr>
+        </ng-template>
     </p-table>
 </div>
 
-<p-dialog [(visible)]="displayModal" header="Detalles del Registro" [modal]="true" [style]="{width: '480px'}" styleClass="p-fluid" [draggable]="false" [resizable]="false">
+<p-dialog 
+    [(visible)]="displayModal" 
+    header="Detalles del Registro" 
+    [modal]="true" 
+    [style]="{width: '480px'}" 
+    styleClass="p-fluid" 
+    [draggable]="false" 
+    [resizable]="false">
+    
     <div class="py-3">
         <div class="field grid mb-4">
             <label class="col-12 md:col-4 font-semibold text-800">Descripción</label>
             <div class="col-12 md:col-8">
-                <input pInputText [(ngModel)]="nuevoDoc.nombre" placeholder="Ej. Pasaporte" class="p-inputtext-lg" />
+                <input pInputText [(ngModel)]="nuevoDoc.nombre" placeholder="Ej. Seguro de Viaje" class="p-inputtext-lg" />
             </div>
         </div>
 
         <div class="field grid mb-4">
             <label class="col-12 md:col-4 font-semibold text-800">Entidad</label>
             <div class="col-12 md:col-8">
-                <input pInputText [(ngModel)]="nuevoDoc.entidad" placeholder="Ej. Cancillería" class="p-inputtext-lg" />
+                <input pInputText [(ngModel)]="nuevoDoc.entidad" placeholder="Ej. Assist Card" class="p-inputtext-lg" />
             </div>
         </div>
 
@@ -94,7 +136,7 @@
         <div class="field grid mb-4">
             <label class="col-12 md:col-4 font-semibold text-800">Notas</label>
             <div class="col-12 md:col-8">
-                <textarea pInputTextarea [(ngModel)]="nuevoDoc.descripcion" rows="2" placeholder="Detalles..." class="p-inputtext-lg"></textarea>
+                <textarea pInputTextarea [(ngModel)]="nuevoDoc.descripcion" rows="2" placeholder="Nro de póliza o contacto..." class="p-inputtext-lg"></textarea>
             </div>
         </div>
 
@@ -109,7 +151,7 @@
             <label class="col-12 md:col-4 font-semibold text-800">Estado</label>
             <div class="col-12 md:col-8 flex align-items-center">
                 <p-checkbox [(ngModel)]="nuevoDoc.reservadoComprado" [binary]="true" id="is_paid"></p-checkbox>
-                <label for="is_paid" class="ml-2 text-700 cursor-pointer text-sm">Marcar como pagado</label>
+                <label for="is_paid" class="ml-2 text-700 cursor-pointer text-sm">Marcar como pagado ahora</label>
             </div>
         </div>
     </div>
@@ -117,7 +159,7 @@
     <ng-template pTemplate="footer">
         <div class="flex gap-2 justify-content-end pb-2">
             <p-button label="Cancelar" [text]="true" severity="secondary" (click)="displayModal = false"></p-button>
-            <p-button label="Guardar" (click)="guardar()" severity="success"></p-button>
+            <p-button label="Guardar Registro" icon="pi pi-save" (click)="guardar()" severity="success"></p-button>
         </div>
     </ng-template>
 </p-dialog>

@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, OnInit, signal, ViewChild, inject } from '@angular/core';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { Table, TableModule } from 'primeng/table';
 import { CommonModule, CurrencyPipe } from '@angular/common';
@@ -20,8 +20,12 @@ import { IconFieldModule } from 'primeng/iconfield';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
 
+// Importante: Ajusta esta ruta a tu servicio real
+import { HotelService } from '../service/hotel.service';
+
 export interface Product {
     id?: string;
+    _id?: string;
     name?: string;
     description?: string;
     price?: number;
@@ -33,7 +37,7 @@ export interface Product {
 }
 
 @Component({
-    selector: 'app-crud',
+    selector: 'app-alojamientos',
     standalone: true,
     imports: [
         CommonModule, TableModule, FormsModule, ButtonModule, RippleModule,
@@ -49,17 +53,15 @@ export interface Product {
 
         <div class="card">
             <div class="flex justify-between items-center mb-4">
-                <div class="font-semibold text-xl text-800">Gestión de Alojamientos</div>
+                <div class="font-semibold text-xl text-800">Gestión de Alojamientos (MongoDB)</div>
                 <p-tag severity="contrast" [style]="{'font-size': '1.1rem', 'padding': '8px 15px'}" 
-                       [value]="'Inversión Total: ' + (calcularTotal() | currency:'USD':'symbol':'1.0-2')" />
+                        [value]="'Inversión Total: ' + (calcularTotal() | currency:'USD':'symbol':'1.0-2')" />
             </div>
 
             <p-toolbar styleClass="mb-6">
                 <ng-template #start>
                     <p-button label="Nuevo Alojamiento" icon="pi pi-plus" severity="success" class="mr-2" (onClick)="openNew()" />
-                    <p-button severity="danger" label="Eliminar Seleccionados" icon="pi pi-trash" outlined (onClick)="deleteSelectedProducts()" [disabled]="!selectedProducts || !selectedProducts.length" />
                 </ng-template>
-
                 <ng-template #end>
                     <p-button label="Exportar" icon="pi pi-upload" severity="secondary" (onClick)="exportCSV()" />
                 </ng-template>
@@ -82,10 +84,10 @@ export interface Product {
                     <tr>
                         <th style="width: 3rem"><p-tableHeaderCheckbox /></th>
                         <th>Nombre / Link</th>
-                        <th class="text-center">Detalles</th> 
-                        <th>Precio</th>
+                        <th class="text-center">Notas</th> 
+                        <th>Precio (USD)</th>
                         <th>Tipo</th>
-                        <th>Puntuación</th>
+                        <th>Rating</th>
                         <th style="min-width: 14rem">Estado</th>
                         <th>Acciones</th>
                     </tr>
@@ -101,8 +103,8 @@ export interface Product {
                             </a>
                         </td>
                         <td class="text-center">
-                            <i *ngIf="product.description" class="pi pi-eye text-primary cursor-pointer text-xl" [pTooltip]="product.description" tooltipPosition="top"></i>
-                            <i *ngIf="!product.description" class="pi pi-eye-slash text-300"></i>
+                            <i *ngIf="product.description" class="pi pi-comment text-primary cursor-pointer text-xl" [pTooltip]="product.description" tooltipPosition="top"></i>
+                            <i *ngIf="!product.description" class="pi pi-comment text-200"></i>
                         </td>
                         <td class="font-medium text-primary">{{ product.price | currency: 'USD' }}</td>
                         <td>{{ product.tipoAlojamiento }}</td>
@@ -129,7 +131,7 @@ export interface Product {
                 <div class="flex flex-col gap-4">
                     <p class="text-sm">¿A qué destino quieres sumar este alojamiento como gasto de <b>Hospedaje</b>?</p>
                     <p-select [options]="listaDestinos" [(ngModel)]="destinoSeleccionado" optionLabel="nombre" placeholder="Selecciona destino" styleClass="w-full" appendTo="body"></p-select>
-                    <p-button label="Confirmar Gasto" icon="pi pi-check" (onClick)="confirmarVinculacion()" [disabled]="!destinoSeleccionado"></p-button>
+                    <p-button label="Confirmar Gasto" icon="pi pi-check" (onClick)="confirmarVinculacion()" [disabled]="!destinoSeleccionado" severity="success" class="w-full"></p-button>
                 </div>
             </p-dialog>
 
@@ -138,38 +140,35 @@ export interface Product {
                     <div class="flex flex-col gap-5 pt-2">
                         <div class="flex flex-col gap-2">
                             <label class="font-bold text-800">Nombre del Alojamiento</label>
-                            <input type="text" pInputText [(ngModel)]="product.name" required autofocus placeholder="Ej: Hotel Hilton" />
+                            <input type="text" pInputText [(ngModel)]="product.name" required autofocus placeholder="Ej: Airbnb Roma" />
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div class="flex flex-col gap-2">
-                                <label class="font-bold text-800">Tipo de Alojamiento</label>
-                                <p-select [(ngModel)]="product.tipoAlojamiento" [options]="tipos" placeholder="Seleccionar tipo" />
+                                <label class="font-bold text-800">Tipo</label>
+                                <p-select [(ngModel)]="product.tipoAlojamiento" [options]="tipos" placeholder="Seleccionar" />
                             </div>
                             <div class="flex flex-col gap-2">
-                                <label class="font-bold text-800">Estado de Gestión</label>
+                                <label class="font-bold text-800">Estado</label>
                                 <p-select [(ngModel)]="product.inventoryStatus" [options]="statuses" optionLabel="label" optionValue="label" />
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div class="flex flex-col gap-2">
-                                <label class="font-bold text-800">Precio Sugerido (USD)</label>
+                                <label class="font-bold text-800">Precio (USD)</label>
                                 <p-inputnumber [(ngModel)]="product.price" mode="currency" currency="USD" locale="en-US" />
                             </div>
                             <div class="flex flex-col gap-2">
-                                <label class="font-bold text-800">Puntuación Personal</label>
+                                <label class="font-bold text-800">Rating</label>
                                 <div class="pt-2"><p-rating [(ngModel)]="product.rating" /></div>
                             </div>
                         </div>
                         <div class="flex flex-col gap-2">
-                            <label class="font-bold text-800">Enlace Web</label>
-                            <div class="p-inputgroup">
-                                <span class="p-inputgroup-addon"><i class="pi pi-link"></i></span>
-                                <input type="text" pInputText [(ngModel)]="product.URL" placeholder="https://..." />
-                            </div>
+                            <label class="font-bold text-800">Link Web</label>
+                            <input type="text" pInputText [(ngModel)]="product.URL" placeholder="https://..." />
                         </div>
                         <div class="flex flex-col gap-2">
-                            <label class="font-bold text-800">Descripción y Notas</label>
-                            <textarea pTextarea [(ngModel)]="product.description" rows="5" style="resize: none"></textarea>
+                            <label class="font-bold text-800">Notas</label>
+                            <textarea pTextarea [(ngModel)]="product.description" rows="3" style="resize: none"></textarea>
                         </div>
                     </div>
                 </ng-template>
@@ -182,6 +181,10 @@ export interface Product {
     `
 })
 export class Crud implements OnInit {
+    private hotelService = inject(HotelService);
+    private messageService = inject(MessageService);
+    private confirmationService = inject(ConfirmationService);
+
     products = signal<Product[]>([]);
     product: Product = {};
     selectedProducts!: Product[] | null;
@@ -197,45 +200,77 @@ export class Crud implements OnInit {
     tipos = ['Hotel', 'Casa', 'Apartamento', 'Hostal', 'Otro'];
 
     private readonly LS_CALC = 'mis_destinos_data_v2';
-    private readonly LS_ALOJ = 'mis_alojamientos_data_v1';
 
     @ViewChild('dt') dt!: Table;
-
-    constructor(private messageService: MessageService, private confirmationService: ConfirmationService) {}
 
     ngOnInit() { this.loadData(); }
 
     loadData() {
-        const saved = localStorage.getItem(this.LS_ALOJ);
-        if (saved) this.products.set(JSON.parse(saved));
+        this.hotelService.getHotels().subscribe({
+            next: (data: any) => {
+                const mapped = data.map((h: any) => ({
+                    id: h._id,
+                    name: h.nombre,
+                    description: h.notas,
+                    price: h.precioTotal,
+                    inventoryStatus: h.status,
+                    tipoAlojamiento: h.tipo,
+                    URL: h.url,
+                    rating: h.rating || 0,
+                    registradoEnCalculadora: h.registradoEnCalculadora
+                }));
+                this.products.set(mapped);
+            }
+        });
     }
 
-    saveToLocal() {
-        localStorage.setItem(this.LS_ALOJ, JSON.stringify(this.products()));
+    saveProduct() {
+        this.submitted = true;
+        if (this.product.name?.trim()) {
+            const body = {
+                _id: this.product.id,
+                nombre: this.product.name,
+                notas: this.product.description,
+                precioTotal: this.product.price,
+                status: this.product.inventoryStatus,
+                tipo: this.product.tipoAlojamiento,
+                url: this.product.URL,
+                rating: this.product.rating,
+                registradoEnCalculadora: this.product.registradoEnCalculadora
+            };
+
+            this.hotelService.saveHotel(body).subscribe({
+                next: (res: any) => {
+                    this.loadData();
+                    if (this.product.inventoryStatus === 'Reservado' && !this.product.registradoEnCalculadora) {
+                        this.abrirVinculacion({ ...this.product, id: res._id });
+                    }
+                    this.productDialog = false;
+                    this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Sincronizado con MongoDB' });
+                }
+            });
+        }
     }
 
     onStatusChange(product: Product) {
         if (product.inventoryStatus === 'Reservado') {
-            if (!product.registradoEnCalculadora) {
-                this.abrirVinculacion(product);
-            }
-        } else {
-            // Si cambia de Reservado a cualquier otro estado, eliminamos el gasto de la calculadora
-            if (product.registradoEnCalculadora) {
-                this.syncDeleteWithCalculadora([product.id]);
-                product.registradoEnCalculadora = false;
-            }
+            if (!product.registradoEnCalculadora) this.abrirVinculacion(product);
+        } else if (product.registradoEnCalculadora) {
+            this.syncDeleteWithCalculadora([product.id]);
+            product.registradoEnCalculadora = false;
+            this.updateQuickStatus(product);
         }
-        this.saveToLocal();
+    }
+
+    updateQuickStatus(product: Product) {
+        this.hotelService.saveHotel({ _id: product.id, status: product.inventoryStatus, registradoEnCalculadora: product.registradoEnCalculadora }).subscribe();
     }
 
     abrirVinculacion(product: Product) {
         const data = localStorage.getItem(this.LS_CALC);
         this.listaDestinos = data ? JSON.parse(data) : [];
-
         if (this.listaDestinos.length === 0) {
-            this.messageService.add({ severity: 'warn', summary: 'Info', detail: 'Crea un destino en la calculadora primero' });
-            product.inventoryStatus = 'Visto'; // Revertir si no hay destinos
+            this.messageService.add({ severity: 'warn', detail: 'Crea un destino en la calculadora primero' });
             return;
         }
         this.alojamientoPendiente = product;
@@ -244,121 +279,54 @@ export class Crud implements OnInit {
 
     confirmarVinculacion() {
         if (!this.alojamientoPendiente || !this.destinoSeleccionado) return;
-
-        const dataCalculadora = JSON.parse(localStorage.getItem(this.LS_CALC) || '[]');
-        const index = dataCalculadora.findIndex((d: any) => d.id === this.destinoSeleccionado.id);
+        const dataCalc = JSON.parse(localStorage.getItem(this.LS_CALC) || '[]');
+        const idx = dataCalc.findIndex((d: any) => d.id === this.destinoSeleccionado.id);
         
-        if (index !== -1) {
-            const nuevoGasto = {
-                id: Date.now(),
-                refId: this.alojamientoPendiente.id, 
-                categoria: 'Hospedaje',
-                descripcion: `Reserva: ${this.alojamientoPendiente.name}`,
-                monto: this.alojamientoPendiente.price || 0
-            };
-
-            if (!dataCalculadora[index].gastos) dataCalculadora[index].gastos = [];
-            dataCalculadora[index].gastos.push(nuevoGasto);
-            
-            localStorage.setItem(this.LS_CALC, JSON.stringify(dataCalculadora));
+        if (idx !== -1) {
+            const gasto = { id: Date.now(), refId: this.alojamientoPendiente.id, categoria: 'Hospedaje', descripcion: `Hotel: ${this.alojamientoPendiente.name}`, monto: this.alojamientoPendiente.price || 0 };
+            if (!dataCalc[idx].gastos) dataCalc[idx].gastos = [];
+            dataCalc[idx].gastos.push(gasto);
+            localStorage.setItem(this.LS_CALC, JSON.stringify(dataCalc));
             window.dispatchEvent(new Event('storage'));
-
             this.alojamientoPendiente.registradoEnCalculadora = true;
-            this.saveToLocal();
-            this.messageService.add({ severity: 'success', summary: 'Sincronizado', detail: 'Gasto enviado a la calculadora' });
+            this.updateQuickStatus(this.alojamientoPendiente);
+            this.messageService.add({ severity: 'success', summary: 'Calculadora Actualizada' });
         }
         this.destinosDialog = false;
     }
 
-    // --- LÓGICA DE BORRADO EN CADENA ---
-    private syncDeleteWithCalculadora(idsParaBorrar: (string | undefined)[]) {
-        const dataCalc = JSON.parse(localStorage.getItem(this.LS_CALC) || '[]');
-        
-        const dataActualizada = dataCalc.map((destino: any) => {
-            if (destino.gastos) {
-                // Filtramos: Quitamos los gastos cuyo refId coincida con los productos eliminados
-                destino.gastos = destino.gastos.filter((gasto: any) => !idsParaBorrar.includes(gasto.refId));
+    deleteProduct(p: Product) {
+        this.confirmationService.confirm({
+            message: `¿Eliminar ${p.name}?`,
+            accept: () => {
+                this.hotelService.deleteHotel(p.id!).subscribe(() => {
+                    this.products.set(this.products().filter(x => x.id !== p.id));
+                    this.syncDeleteWithCalculadora([p.id]);
+                });
             }
-            return destino;
         });
+    }
 
-        localStorage.setItem(this.LS_CALC, JSON.stringify(dataActualizada));
+    private syncDeleteWithCalculadora(ids: (string | undefined)[]) {
+        const data = JSON.parse(localStorage.getItem(this.LS_CALC) || '[]');
+        const updated = data.map((d: any) => {
+            if (d.gastos) d.gastos = d.gastos.filter((g: any) => !ids.includes(g.refId));
+            return d;
+        });
+        localStorage.setItem(this.LS_CALC, JSON.stringify(updated));
         window.dispatchEvent(new Event('storage'));
     }
 
-    deleteProduct(p: Product) {
-        this.confirmationService.confirm({
-            message: `¿Eliminar ${p.name}? También se borrará de la calculadora si estaba vinculado.`,
-            header: 'Confirmar Eliminación',
-            icon: 'pi pi-exclamation-triangle',
-            accept: () => {
-                this.products.set(this.products().filter((x) => x.id !== p.id));
-                this.saveToLocal();
-                this.syncDeleteWithCalculadora([p.id]);
-                this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Alojamiento y gastos eliminados' });
-            }
-        });
-    }
-
-    deleteSelectedProducts() {
-        this.confirmationService.confirm({
-            message: '¿Eliminar los alojamientos seleccionados? Se borrarán sus gastos vinculados en la calculadora.',
-            header: 'Confirmar Masivo',
-            icon: 'pi pi-trash',
-            accept: () => {
-                const idsParaBorrar = this.selectedProducts?.map(p => p.id) || [];
-                this.products.set(this.products().filter((p) => !this.selectedProducts?.includes(p)));
-                this.selectedProducts = null;
-                this.saveToLocal();
-                this.syncDeleteWithCalculadora(idsParaBorrar);
-                this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Seleccionados eliminados con éxito' });
-            }
-        });
-    }
-
-    saveProduct() {
-        this.submitted = true;
-        if (this.product.name?.trim()) {
-            let _products = [...this.products()];
-            if (this.product.id) {
-                const index = _products.findIndex((p) => p.id === this.product.id);
-                _products[index] = this.product;
-            } else {
-                this.product.id = Math.random().toString(36).substring(2, 9);
-                _products.push(this.product);
-            }
-            
-            this.products.set(_products);
-            this.saveToLocal();
-            
-            // Si el estado es Reservado al guardar, procesar vinculación
-            if (this.product.inventoryStatus === 'Reservado') {
-                this.onStatusChange(this.product);
-            }
-            
-            this.productDialog = false;
-            this.product = {};
-            this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Alojamiento guardado' });
-        }
-    }
-
     calcularTotal() { return this.products().reduce((acc, p) => acc + (p.price || 0), 0); }
-    
-    getSeverity(status: string) {
-        switch (status) {
-            case 'Reservado': return 'success';
-            case 'En proceso': return 'warn';
-            case 'Descartado': return 'danger';
-            case 'Visto': return 'info';
-            default: return 'secondary';
-        }
+    getSeverity(s: string) {
+        if (s === 'Reservado') return 'success';
+        if (s === 'En proceso') return 'warn';
+        if (s === 'Descartado') return 'danger';
+        return 'info';
     }
-    
-    openNew() { this.product = { inventoryStatus: 'Visto', rating: 0 }; this.submitted = false; this.productDialog = true; }
+    openNew() { this.product = { inventoryStatus: 'Visto', rating: 0 }; this.productDialog = true; }
     editProduct(p: Product) { this.product = { ...p }; this.productDialog = true; }
-    hideDialog() { this.productDialog = false; this.submitted = false; }
+    hideDialog() { this.productDialog = false; }
     exportCSV() { this.dt.exportCSV(); }
-    onGlobalFilter(table: Table, event: Event) {
-        table.filterGlobal((event.target as HTMLInputElement).value, 'contains');
-    }
+    onGlobalFilter(t: Table, e: Event) { t.filterGlobal((e.target as HTMLInputElement).value, 'contains'); }
 }

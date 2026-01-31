@@ -30,11 +30,10 @@ export class PerfilUsuarioCardComponent implements OnInit {
     public datosPerfil: IPerfilUsuario | null = null;
     public tieneInformacion: boolean = false;
 
-    // Fechas automáticas fijas
+    // Fechas automáticas fijas sincronizadas con tus instrucciones
     public readonly FECHA_CREACION = '10/01/2026';
     public readonly ULTIMO_INGRESO = new Date().toLocaleString();
 
-    // Escuchar cambios en LocalStorage (Sincronización automática)
     @HostListener('window:storage')
     onStorageChange() {
         this.cargarInformacionConsolidada();
@@ -45,48 +44,59 @@ export class PerfilUsuarioCardComponent implements OnInit {
     }
 
     cargarInformacionConsolidada() {
+        // 1. Obtener todas las fuentes de datos posibles
         const profileData = localStorage.getItem('user_profile');
+        const loginData = localStorage.getItem('currentUser'); // <-- El correo del registro
         const presupuestoGlobalRaw = localStorage.getItem('mi_presupuesto_global');
         const destinosData = localStorage.getItem('mis_destinos_data_v2');
 
-        // Si no hay perfil, forzamos el estado de "Perfil Incompleto"
-        if (!profileData) {
+        // Parseo seguro de objetos
+        const profile = profileData ? JSON.parse(profileData) : null;
+        const login = loginData ? JSON.parse(loginData) : null;
+        const destinos = destinosData ? JSON.parse(destinosData) : [];
+        const presupuestoCalculado = presupuestoGlobalRaw ? JSON.parse(presupuestoGlobalRaw) : 0;
+
+        // Si no hay perfil NI datos de login, el usuario no está autenticado
+        if (!profile && !login) {
             this.tieneInformacion = false;
             return;
         }
 
-        const profile = JSON.parse(profileData);
-        const destinos = destinosData ? JSON.parse(destinosData) : [];
-        
-        // Lógica de presupuesto: Si no existe o es nulo, ponemos 0
-        const presupuestoCalculado = presupuestoGlobalRaw ? JSON.parse(presupuestoGlobalRaw) : 0;
-
-        // Buscar el destino principal (el de mayor inversión)
+        // 2. Lógica de Destino Principal (se mantiene igual)
         let destinoMasCaro = 'Sin destinos';
         if (destinos.length > 0) {
             const topDestino = destinos.reduce((prev: any, current: any) => {
-                const suma = (d: any) => (d.gastos || []).reduce((acc: number, g: any) => acc + g.monto, 0);
+                const suma = (d: any) => (d.gastos || []).reduce((acc: number, g: any) => acc + (g.monto || 0), 0);
                 return (suma(prev) > suma(current)) ? prev : current;
             });
-            destinoMasCaro = topDestino.nombre;
+            destinoMasCaro = topDestino.nombre || 'Sin nombre';
         }
 
+        // 3. CONSOLIDACIÓN: Aquí es donde evitamos que el correo quede vacío
         this.datosPerfil = {
-            nombreUsuario: profile.nombre || 'Viajero',
-            correoUsuario: profile.email || 'Sin correo',
+            // Si no hay nombre en perfil, usamos 'Viajero de Voyagee'
+            nombreUsuario: profile?.nombre || 'Viajero de Voyagee',
+            
+            // Prioridad: 1. Perfil completo, 2. Correo de sesión activa, 3. 'Sin correo'
+            correoUsuario: profile?.email || login?.email || 'Correo no disponible',
+            
             estadoActivo: true,
             fechaCreacion: this.FECHA_CREACION,
             ultimoIngreso: this.ULTIMO_INGRESO,
-            fechaInicioViaje: profile.fechaViaje ? new Date(profile.fechaViaje).toLocaleDateString() : 'Pendiente',
-            presupuestoTotal: presupuestoCalculado, // Aquí se pone 0 automático si no hay datos
-            moneda: profile.moneda || 'USD',
+            
+            // Si no hay fecha de viaje, mostramos 'Configurar en perfil'
+            fechaInicioViaje: profile?.fechaViaje 
+                ? new Date(profile.fechaViaje).toLocaleDateString() 
+                : 'Configurar en perfil',
+            
+            presupuestoTotal: presupuestoCalculado,
+            moneda: profile?.moneda || 'USD',
             destinoPrincipal: destinoMasCaro
         };
 
         this.tieneInformacion = true;
     }
 
-    // REDIRECCIÓN A CONFIGURACIÓN (Ruta /presupuesto)
     irAConfiguracion() {
         this.router.navigate(['/presupuesto']);
     }

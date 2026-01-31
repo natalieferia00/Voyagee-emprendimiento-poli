@@ -17,8 +17,12 @@ import { TextareaModule } from 'primeng/textarea';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToastModule } from 'primeng/toast';
 
+// Servicio
+import { FoodService } from '../service/food.service';
+
 interface GastoAlimentacion {
-    id?: number;
+    id?: string | number;
+    _id?: string;
     nombre?: string;
     categoria?: string; 
     rating?: number;
@@ -45,7 +49,7 @@ interface GastoAlimentacion {
 
     <div class="card">
         <div class="flex justify-between items-center mb-4">
-            <div class="font-semibold text-xl">Gestión de Alimentación y Gastos</div>
+            <div class="font-semibold text-xl text-800">Gestión de Alimentación y Gastos</div>
             <p-tag severity="contrast" [style]="{'font-size': '1.1rem', 'padding': '8px 15px'}" 
                    [value]="'Inversión Total: ' + (calcularTotal() | currency:'USD':'symbol':'1.0-0')" />
         </div>
@@ -111,7 +115,7 @@ interface GastoAlimentacion {
             <div class="flex flex-col gap-4">
                 <p class="text-sm">Has marcado este gasto como <b>Reservado/Confirmado</b>. ¿A qué destino pertenece?</p>
                 <p-select [options]="listaDestinos" [(ngModel)]="destinoSeleccionado" optionLabel="nombre" placeholder="Seleccionar destino" styleClass="w-full" appendTo="body" />
-                <p-button label="Confirmar Sincronización" icon="pi pi-sync" (onClick)="confirmarVinculacion()" [disabled]="!destinoSeleccionado" />
+                <p-button label="Confirmar Sincronización" icon="pi pi-sync" (onClick)="confirmarVinculacion()" [disabled]="!destinoSeleccionado" severity="success" />
             </div>
         </p-dialog>
 
@@ -129,14 +133,14 @@ interface GastoAlimentacion {
                     </div>
                     <div class="flex flex-col gap-2">
                         <label class="font-bold text-sm">Estado</label>
-                        <p-select [(ngModel)]="gasto.estado" [options]="estados" optionLabel="label" optionValue="value" placeholder="Seleccionar" />
+                        <p-select [(ngModel)]="gasto.estado" [options]="estados" optionLabel="label" optionValue="value" />
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div class="flex flex-col gap-2">
                         <label class="font-bold text-sm">Costo Estimado (USD)</label>
-                        <p-inputnumber [(ngModel)]="gasto.costoEstimado" mode="currency" currency="USD" locale="en-US" placeholder="$ 0" />
+                        <p-inputnumber [(ngModel)]="gasto.costoEstimado" mode="currency" currency="USD" locale="en-US" />
                     </div>
                     <div class="flex flex-col gap-2">
                         <label class="font-bold text-sm">Valoración Personal</label>
@@ -148,12 +152,12 @@ interface GastoAlimentacion {
 
                 <div class="flex flex-col gap-2">
                     <label class="font-bold text-sm">URL Referencia / Ubicación</label>
-                    <input type="text" pInputText [(ngModel)]="gasto.url" placeholder="https://google.maps/..." />
+                    <input type="text" pInputText [(ngModel)]="gasto.url" />
                 </div>
 
                 <div class="flex flex-col gap-2">
                     <label class="font-bold text-sm">Notas / Qué pedir</label>
-                    <textarea pTextarea [(ngModel)]="gasto.description" rows="3" placeholder="Ej: Famoso por sus pastas..."></textarea>
+                    <textarea pTextarea [(ngModel)]="gasto.description" rows="3"></textarea>
                 </div>
             </div>
 
@@ -166,6 +170,10 @@ interface GastoAlimentacion {
     `
 })
 export class GestionAlimentacionComponent implements OnInit {
+    private foodService = inject(FoodService);
+    private messageService = inject(MessageService);
+    private confirmationService = inject(ConfirmationService);
+
     gastos = signal<GastoAlimentacion[]>([]);
     gasto: GastoAlimentacion = {};
     gastoDialog: boolean = false;
@@ -174,11 +182,7 @@ export class GestionAlimentacionComponent implements OnInit {
     destinoSeleccionado: any = null;
     gastoPendiente: GastoAlimentacion | null = null;
 
-    private readonly LS_ALIMENTACION = 'mis_gastos_alimentacion_v1';
     private readonly LS_CALC = 'mis_destinos_data_v2';
-
-    private messageService = inject(MessageService);
-    private confirmationService = inject(ConfirmationService);
 
     categorias = ['Restaurante', 'Supermercado', 'Panadería', 'Calle / Snack', 'Otros'];
     
@@ -189,18 +193,38 @@ export class GestionAlimentacionComponent implements OnInit {
         { label: 'Descartado', value: 'Descartado' }
     ];
 
-    @HostListener('window:storage')
-    onExternalUpdate() { this.loadFromLocal(); }
+    ngOnInit() { this.loadData(); }
 
-    ngOnInit() { this.loadFromLocal(); }
-
-    loadFromLocal() {
-        const saved = localStorage.getItem(this.LS_ALIMENTACION);
-        if (saved) this.gastos.set(JSON.parse(saved));
+    loadData() {
+        this.foodService.getFoods().subscribe({
+            next: (data) => {
+                this.gastos.set(data.map(f => ({ ...f, id: f._id })));
+            },
+            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudieron cargar los datos' })
+        });
     }
 
-    saveToLocal() {
-        localStorage.setItem(this.LS_ALIMENTACION, JSON.stringify(this.gastos()));
+    saveGasto() {
+        if (!this.gasto.nombre) return;
+
+        const body = { ...this.gasto, _id: this.gasto.id };
+        
+        this.foodService.saveFood(body).subscribe({
+            next: (res) => {
+                this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Registro guardado en la nube' });
+                this.loadData();
+                
+                // Lógica de sincronización con calculadora
+                if (this.gasto.estado === 'Reservado' && !this.gasto.registradoEnCalculadora) {
+                    this.abrirVinculacion({ ...this.gasto, id: res._id });
+                } else if (this.gasto.estado !== 'Reservado' && this.gasto.registradoEnCalculadora) {
+                    this.eliminarDeCalculadora(this.gasto);
+                }
+                
+                this.gastoDialog = false;
+            },
+            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Error al conectar con el servidor' })
+        });
     }
 
     onStatusChange(g: GastoAlimentacion) {
@@ -209,14 +233,16 @@ export class GestionAlimentacionComponent implements OnInit {
         } else if (g.estado !== 'Reservado' && g.registradoEnCalculadora) {
             this.eliminarDeCalculadora(g);
         }
-        this.saveToLocal();
+        
+        this.foodService.saveFood({ ...g, _id: g.id }).subscribe();
     }
 
     abrirVinculacion(g: GastoAlimentacion) {
         const data = localStorage.getItem(this.LS_CALC);
         this.listaDestinos = data ? JSON.parse(data) : [];
+        
         if (this.listaDestinos.length === 0) {
-            this.messageService.add({ severity: 'warn', summary: 'Sin Destinos', detail: 'Crea un destino en la Calculadora primero.' });
+            this.messageService.add({ severity: 'warn', summary: 'Atención', detail: 'Crea un destino en la Calculadora primero' });
             g.estado = 'Visto';
             return;
         }
@@ -226,43 +252,47 @@ export class GestionAlimentacionComponent implements OnInit {
 
     confirmarVinculacion() {
         if (!this.gastoPendiente || !this.destinoSeleccionado) return;
+        
         const dataCalc = JSON.parse(localStorage.getItem(this.LS_CALC) || '[]');
         const idx = dataCalc.findIndex((d: any) => d.id === this.destinoSeleccionado.id);
         
         if (idx !== -1) {
             const gastoId = Date.now();
             if (!dataCalc[idx].gastos) dataCalc[idx].gastos = [];
+            
             dataCalc[idx].gastos.push({
                 id: gastoId,
-                refId: this.gastoPendiente.id, // Referencia para sincronización
+                refId: this.gastoPendiente.id,
                 categoria: 'Alimentación',
                 descripcion: `Alim: ${this.gastoPendiente.nombre}`,
                 monto: this.gastoPendiente.costoEstimado || 0
             });
+            
             localStorage.setItem(this.LS_CALC, JSON.stringify(dataCalc));
             window.dispatchEvent(new Event('storage'));
             
             this.gastoPendiente.registradoEnCalculadora = true;
             this.gastoPendiente.refGastoId = gastoId;
-            this.saveToLocal();
-            this.messageService.add({ severity: 'success', summary: 'Sincronizado', detail: 'Sumado a la calculadora' });
+            
+            this.foodService.saveFood({ ...this.gastoPendiente, _id: this.gastoPendiente.id }).subscribe();
+            this.messageService.add({ severity: 'success', summary: 'Sincronizado', detail: 'Añadido al presupuesto' });
         }
         this.destinosDialog = false;
     }
 
     eliminarDeCalculadora(g: GastoAlimentacion) {
         const dataCalc = JSON.parse(localStorage.getItem(this.LS_CALC) || '[]');
-        let cambio = false;
+        let huboCambio = false;
 
         dataCalc.forEach((dest: any) => {
             if (dest.gastos) {
                 const lenOriginal = dest.gastos.length;
                 dest.gastos = dest.gastos.filter((gas: any) => gas.refId !== g.id && gas.id !== g.refGastoId);
-                if (dest.gastos.length !== lenOriginal) cambio = true;
+                if (dest.gastos.length !== lenOriginal) huboCambio = true;
             }
         });
 
-        if (cambio) {
+        if (huboCambio) {
             localStorage.setItem(this.LS_CALC, JSON.stringify(dataCalc));
             window.dispatchEvent(new Event('storage'));
         }
@@ -270,40 +300,17 @@ export class GestionAlimentacionComponent implements OnInit {
         g.refGastoId = undefined;
     }
 
-    saveGasto() {
-        if (!this.gasto.nombre) return;
-        let _gastos = [...this.gastos()];
-        if (this.gasto.id) {
-            const index = _gastos.findIndex(r => r.id === this.gasto.id);
-            _gastos[index] = this.gasto;
-        } else {
-            this.gasto.id = Date.now();
-            _gastos.push(this.gasto);
-        }
-        this.gastos.set(_gastos);
-        this.saveToLocal();
-        
-        // Ejecutar lógica de vinculación según el estado final
-        if (this.gasto.estado === 'Reservado') {
-            this.onStatusChange(this.gasto);
-        } else if (this.gasto.registradoEnCalculadora) {
-            this.eliminarDeCalculadora(this.gasto);
-        }
-
-        this.gastoDialog = false;
-        this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Registro actualizado' });
-    }
-
     deleteGasto(g: GastoAlimentacion) {
         this.confirmationService.confirm({
-            message: `¿Estás seguro de eliminar "${g.nombre}"? Se quitará también de la calculadora.`,
-            header: 'Confirmar Eliminación',
-            icon: 'pi pi-trash',
+            message: `¿Eliminar "${g.nombre}"?`,
+            header: 'Confirmar eliminación',
+            icon: 'pi pi-exclamation-triangle',
             accept: () => {
-                this.eliminarDeCalculadora(g);
-                this.gastos.set(this.gastos().filter((val) => val.id !== g.id));
-                this.saveToLocal();
-                this.messageService.add({ severity: 'info', summary: 'Eliminado', detail: 'El registro ha sido borrado' });
+                this.foodService.deleteFood(g.id!.toString()).subscribe(() => {
+                    this.eliminarDeCalculadora(g);
+                    this.loadData();
+                    this.messageService.add({ severity: 'info', summary: 'Borrado', detail: 'Registro eliminado' });
+                });
             }
         });
     }

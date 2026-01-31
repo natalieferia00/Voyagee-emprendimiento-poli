@@ -1,6 +1,7 @@
-import { Component, OnInit, signal, effect, computed } from '@angular/core';
+import { Component, OnInit, signal, effect, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DocumentationService } from '../service/documentation.service';
 
 // PrimeNG
 import { TableModule } from 'primeng/table';
@@ -10,7 +11,8 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { CheckboxModule } from 'primeng/checkbox';
 import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
-
+import { MessageService } from 'primeng/api';
+import { ToastModule } from 'primeng/toast';
 
 @Component({
     selector: 'app-documentation',
@@ -18,17 +20,19 @@ import { InputTextModule } from 'primeng/inputtext';
     imports: [
         CommonModule, FormsModule, TableModule, ButtonModule, 
         DialogModule, InputTextModule, InputNumberModule, 
-        CheckboxModule, TooltipModule, 
+        CheckboxModule, TooltipModule, ToastModule
     ],
+    providers: [MessageService],
     templateUrl: './seguros.html'
 })
 export class DocumentationComponent implements OnInit {
+    private docService = inject(DocumentationService);
+    private messageService = inject(MessageService);
+
     displayModal: boolean = false;
+    documentos = signal<any[]>([]);
     
-    // Lista de documentos usando Signals
-    documentos = signal<any[]>(JSON.parse(localStorage.getItem('docs_viaje') || '[]'));
-    
-    // Calculo automático del total para el cuadro negro
+    // El cuadro negro de inversión se calcula sobre lo que está comprado/reservado
     totalAcumulado = computed(() => {
         return this.documentos()
             .filter(d => d.reservadoComprado)
@@ -38,19 +42,29 @@ export class DocumentationComponent implements OnInit {
     nuevoDoc: any = this.resetForm();
 
     constructor() {
-        // Cada vez que documentos cambie, sincronizamos con LocalStorage y la Calculadora
+        // Efecto para sincronizar con la calculadora (LocalStorage) cada vez que cambian los documentos
         effect(() => {
             const lista = this.documentos();
             localStorage.setItem('docs_viaje', JSON.stringify(lista));
-            
-            // Disparar evento para que otros componentes (como la calculadora) se actualicen
+            // Notificar a los widgets de la calculadora para que recalculen
             window.dispatchEvent(new Event('storage'));
         });
     }
 
-    ngOnInit(): void {}
+    ngOnInit(): void {
+        this.loadData();
+    }
 
-    toggleEstado(): void {
+    loadData() {
+        this.docService.getDocs().subscribe({
+            next: (res) => this.documentos.set(res),
+            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo cargar la nube' })
+        });
+    }
+
+    toggleEstado(doc: any): void {
+        // Actualizar en BD cuando cambian el checkbox
+        this.docService.saveDoc(doc).subscribe();
         this.documentos.update(l => [...l]);
     }
 
@@ -71,14 +85,24 @@ export class DocumentationComponent implements OnInit {
     }
 
     guardar(): void {
-        if (this.nuevoDoc.nombre) {
-            this.documentos.update(l => [...l, { ...this.nuevoDoc, id: Date.now() }]);
-            this.displayModal = false;
-        }
+        if (!this.nuevoDoc.nombre) return;
+
+        this.docService.saveDoc(this.nuevoDoc).subscribe({
+            next: () => {
+                this.loadData();
+                this.displayModal = false;
+                this.messageService.add({ severity: 'success', summary: 'Guardado', detail: 'Documento registrado' });
+            }
+        });
     }
 
-    eliminar(id: number): void {
-        this.documentos.update(l => l.filter(d => d.id !== id));
+    eliminar(id: string): void {
+        this.docService.deleteDoc(id).subscribe({
+            next: () => {
+                this.documentos.update(l => l.filter(d => d._id !== id));
+                this.messageService.add({ severity: 'info', summary: 'Eliminado', detail: 'Registro borrado' });
+            }
+        });
     }
 
     formatCurrency(v: number): string {
